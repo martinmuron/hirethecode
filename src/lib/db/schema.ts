@@ -142,14 +142,7 @@ export const subscriptions = pgTable('subscriptions', {
   currentPeriodEnd: timestamp('current_period_end').notNull(),
 })
 
-// Indexes
-export const developerSkillsSkillIdIndex = index('idx_developer_skills_skill_id').on(developerSkills.skillId)
-export const developerSkillsUserIdIndex = index('idx_developer_skills_user_id').on(developerSkills.userId)
-export const projectSkillsSkillIdIndex = index('idx_project_skills_skill_id').on(projectSkills.skillId)
-export const projectSkillsProjectIdIndex = index('idx_project_skills_project_id').on(projectSkills.projectId)
-export const projectsCompanyIdIndex = index('idx_projects_company_id').on(projects.companyId)
-export const projectsStatusIndex = index('idx_projects_status').on(projects.status)
-export const subscriptionsUserIdIndex = index('idx_subscriptions_user_id').on(subscriptions.userId)
+// Indexes will be added inline with table definitions in a future update
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
