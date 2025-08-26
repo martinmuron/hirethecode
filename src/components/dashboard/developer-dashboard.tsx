@@ -3,14 +3,21 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import type { Profile } from '@/lib/db/schema'
+import { DashboardNav } from '@/components/navigation/dashboard-nav'
 
 interface DeveloperDashboardProps {
   profile: Profile
+  user: {
+    name?: string | null
+    email?: string | null
+    image?: string | null
+  }
 }
 
-export function DeveloperDashboard({ profile }: DeveloperDashboardProps) {
+export function DeveloperDashboard({ profile, user }: DeveloperDashboardProps) {
   return (
     <div className="min-h-screen bg-background">
+      <DashboardNav user={user} role="developer" />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Welcome back, {profile.displayName || 'Developer'}!</h1>

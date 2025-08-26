@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
+import { db } from '@/lib/db'
+import { users, profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { userId, role, displayName } = await request.json()
+
+    // Validate input
+    if (!role || !displayName || !['developer', 'company'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    }
+
+    // Check if user already has a profile
+    const existingProfile = await db.select()
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1)
+
+    if (existingProfile.length > 0) {
+      return NextResponse.json({ error: 'Profile already exists' }, { status: 400 })
+    }
+
+    // Create or update user record
+    await db.insert(users).values({
+      id: userId,
+      email: session.user.email,
+      name: session.user.name,
+      image: session.user.image,
+    }).onConflictDoUpdate({
+      target: users.id,
+      set: {
+        name: session.user.name,
+        image: session.user.image,
+      }
+    })
+
+    // Create profile
+    await db.insert(profiles).values({
+      id: userId,
+      role: role as 'developer' | 'company',
+      displayName,
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error creating profile:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

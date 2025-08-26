@@ -1,62 +1,48 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
+import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { DeveloperDashboard } from '@/components/dashboard/developer-dashboard'
+import { CompanyDashboard } from '@/components/dashboard/company-dashboard'
+import { SubscriptionRequired } from '@/components/dashboard/subscription-required'
 
-export default function DashboardPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">Welcome to Hire the Code</h1>
-          <p className="text-muted-foreground mt-2">
-            Your marketplace for premium developer talent
-          </p>
-        </div>
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions)
+  
+  if (!session?.user?.email) {
+    redirect('/auth/sign-in')
+  }
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Set Up Your Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Complete your profile to get started with the platform.
-              </p>
-              <Button asChild className="w-full">
-                <Link href="/profile">Complete Profile</Link>
-              </Button>
-            </CardContent>
-          </Card>
+  // Get user profile from database
+  const userProfile = await db.select()
+    .from(profiles)
+    .where(eq(profiles.id, session.user.id))
+    .limit(1)
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Browse Projects</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Discover new opportunities from vetted companies.
-              </p>
-              <Button asChild className="w-full" variant="outline">
-                <Link href="/projects">View Projects</Link>
-              </Button>
-            </CardContent>
-          </Card>
+  // If no profile exists, redirect to profile creation
+  if (!userProfile.length) {
+    redirect('/profile/setup')
+  }
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Search Developers</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Find the perfect developers for your projects.
-              </p>
-              <Button asChild className="w-full" variant="outline">
-                <Link href="/developers">Search Developers</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
+  const profile = userProfile[0]
+
+  // Check subscription status (simplified for now)
+  // TODO: Integrate with Stripe to check actual subscription status
+  const hasActiveSubscription = true // For now, assume everyone has subscription
+
+  if (!hasActiveSubscription) {
+    return <SubscriptionRequired role={profile.role} />
+  }
+
+  // Render appropriate dashboard based on role
+  if (profile.role === 'developer') {
+    return <DeveloperDashboard profile={profile} user={session.user} />
+  } else if (profile.role === 'company') {
+    return <CompanyDashboard profile={profile} user={session.user} />
+  }
+
+  // Fallback - shouldn't happen but safety net
+  redirect('/profile/setup')
 }
