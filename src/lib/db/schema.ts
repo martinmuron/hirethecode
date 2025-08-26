@@ -209,6 +209,21 @@ export const projectApplicationsRelations = relations(projectApplications, ({ on
   developer: one(profiles, { fields: [projectApplications.developerId], references: [profiles.id] }),
 }))
 
+// Developer contacts
+export const developerContacts = pgTable('developer_contacts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: uuid('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  developerId: uuid('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  message: text('message').notNull(),
+  status: text('status', { enum: ['sent', 'read', 'replied'] }).default('sent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const developerContactsRelations = relations(developerContacts, ({ one }) => ({
+  company: one(profiles, { fields: [developerContacts.companyId], references: [profiles.id] }),
+  developer: one(profiles, { fields: [developerContacts.developerId], references: [profiles.id] }),
+}))
+
 // Type exports
 export type User = typeof users.$inferSelect
 export type Profile = typeof profiles.$inferSelect
@@ -219,4 +234,5 @@ export type DeveloperSkill = typeof developerSkills.$inferSelect
 export type Project = typeof projects.$inferSelect
 export type ProjectSkill = typeof projectSkills.$inferSelect
 export type ProjectApplication = typeof projectApplications.$inferSelect
+export type DeveloperContact = typeof developerContacts.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
