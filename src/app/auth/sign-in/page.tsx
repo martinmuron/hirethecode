@@ -13,7 +13,7 @@ export default function SignInPage() {
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-bold">Sign in to your account</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a href="/auth/sign-up" className="font-medium text-primary hover:underline">
               Sign up
             </a>

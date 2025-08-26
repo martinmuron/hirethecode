@@ -1,50 +1,40 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import type { Database } from '@/types/database'
-
-type Profile = Database['public']['Tables']['profiles']['Row']
-type Subscription = Database['public']['Tables']['subscriptions']['Row']
+import { authOptions } from '@/lib/auth/config'
+import { db } from '@/lib/db'
+import { profiles, subscriptions } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import type { Profile, Subscription } from '@/lib/db/schema'
 
 export async function getUser() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    return null
-  }
-  
-  return user
+  const session = await getServerSession(authOptions)
+  return session?.user || null
 }
 
 export async function getUserProfile(): Promise<Profile | null> {
-  const supabase = await createClient()
   const user = await getUser()
+  if (!user?.id) return null
   
-  if (!user) return null
-  
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const profile = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1)
     
-  return profile
+  return profile[0] || null
 }
 
 export async function getUserSubscription(): Promise<Subscription | null> {
-  const supabase = await createClient()
   const user = await getUser()
+  if (!user?.id) return null
   
-  if (!user) return null
-  
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
+  const subscription = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, user.id))
+    .limit(1)
     
-  return subscription
+  return subscription[0] || null
 }
 
 export async function requireAuth() {

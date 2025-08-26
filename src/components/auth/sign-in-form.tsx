@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,20 +14,20 @@ export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const result = await signIn('credentials', {
       email,
       password,
+      redirect: false,
     })
 
-    if (error) {
-      setError(error.message)
+    if (result?.error) {
+      setError('Invalid credentials')
     } else {
       router.push('/dashboard')
       router.refresh()
@@ -36,34 +36,9 @@ export function SignInForm() {
     setIsLoading(false)
   }
 
-  const handleGitHubSignIn = async () => {
+  const handleOAuthSignIn = async (provider: 'github' | 'google') => {
     setIsLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    }
+    await signIn(provider, { callbackUrl: '/dashboard' })
   }
 
   return (
@@ -121,14 +96,14 @@ export function SignInForm() {
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
-            onClick={handleGitHubSignIn}
+            onClick={() => handleOAuthSignIn('github')}
             disabled={isLoading}
           >
             GitHub
           </Button>
           <Button
             variant="outline"
-            onClick={handleGoogleSignIn}
+            onClick={() => handleOAuthSignIn('google')}
             disabled={isLoading}
           >
             Google

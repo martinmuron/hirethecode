@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,13 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 export function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
+  const [name, setName] = useState('')
   const [role, setRole] = useState<'developer' | 'company'>('developer')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const router = useRouter()
-  const supabase = createClient()
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,58 +22,20 @@ export function SignUpForm() {
     setError('')
     setMessage('')
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          display_name: displayName,
-          role: role,
-        },
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-    } else if (data?.user && !data.session) {
-      setMessage('Check your email for a verification link!')
-    } else if (data?.session) {
-      router.push('/dashboard')
-      router.refresh()
+    try {
+      // For now, we'll show a message to use OAuth
+      // In a full implementation, you'd create a custom API route for registration
+      setMessage('Please use GitHub or Google to sign up for now. Email registration coming soon!')
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
     }
     
     setIsLoading(false)
   }
 
-  const handleGitHubSignUp = async () => {
+  const handleOAuthSignUp = async (provider: 'github' | 'google') => {
     setIsLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    }
-  }
-
-  const handleGoogleSignUp = async () => {
-    setIsLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    }
+    await signIn(provider, { callbackUrl: '/dashboard' })
   }
 
   return (
@@ -87,12 +46,12 @@ export function SignUpForm() {
       <CardContent className="space-y-6">
         <form onSubmit={handleEmailSignUp} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
+            <Label htmlFor="name">Display Name</Label>
             <Input
-              id="displayName"
+              id="name"
               type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter your display name"
               required
             />
@@ -148,7 +107,7 @@ export function SignUpForm() {
             <p className="text-sm text-red-600">{error}</p>
           )}
           {message && (
-            <p className="text-sm text-green-600">{message}</p>
+            <p className="text-sm text-blue-600">{message}</p>
           )}
           <Button 
             type="submit" 
@@ -173,14 +132,14 @@ export function SignUpForm() {
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
-            onClick={handleGitHubSignUp}
+            onClick={() => handleOAuthSignUp('github')}
             disabled={isLoading}
           >
             GitHub
           </Button>
           <Button
             variant="outline"
-            onClick={handleGoogleSignUp}
+            onClick={() => handleOAuthSignUp('google')}
             disabled={isLoading}
           >
             Google

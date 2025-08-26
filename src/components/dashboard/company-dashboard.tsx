@@ -2,9 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import type { Database } from '@/types/database'
-
-type Profile = Database['public']['Tables']['profiles']['Row']
+import type { Profile } from '@/lib/db/schema'
 
 interface CompanyDashboardProps {
   profile: Profile
@@ -15,7 +13,7 @@ export function CompanyDashboard({ profile }: CompanyDashboardProps) {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Welcome back, {profile.display_name || 'Company'}!</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {profile.displayName || 'Company'}!</h1>
           <p className="text-muted-foreground">Find the perfect developers for your projects</p>
         </div>
 
