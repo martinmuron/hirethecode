@@ -102,10 +102,10 @@ export const projects = pgTable('projects', {
   description: text('description').notNull(),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
   budgetMax: decimal('budget_max', { precision: 10, scale: 2 }),
-  currency: text('currency').default('USD'),
+  currency: text('currency').notNull().default('USD'),
   timeline: text('timeline'),
   locationPref: text('location_pref'),
-  status: text('status', { enum: ['open', 'in_progress', 'closed'] }).default('open'),
+  status: text('status', { enum: ['open', 'in_progress', 'closed'] }).notNull().default('open'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -192,6 +192,23 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   profile: one(profiles, { fields: [subscriptions.userId], references: [profiles.id] }),
 }))
 
+// Project applications
+export const projectApplications = pgTable('project_applications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  developerId: uuid('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  message: text('message').notNull(),
+  status: text('status', { enum: ['pending', 'accepted', 'rejected'] }).default('pending'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey(table.projectId, table.developerId),
+}))
+
+export const projectApplicationsRelations = relations(projectApplications, ({ one }) => ({
+  project: one(projects, { fields: [projectApplications.projectId], references: [projects.id] }),
+  developer: one(profiles, { fields: [projectApplications.developerId], references: [profiles.id] }),
+}))
+
 // Type exports
 export type User = typeof users.$inferSelect
 export type Profile = typeof profiles.$inferSelect
@@ -201,4 +218,5 @@ export type Skill = typeof skills.$inferSelect
 export type DeveloperSkill = typeof developerSkills.$inferSelect
 export type Project = typeof projects.$inferSelect
 export type ProjectSkill = typeof projectSkills.$inferSelect
+export type ProjectApplication = typeof projectApplications.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
