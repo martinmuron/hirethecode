@@ -9,6 +9,8 @@ import {
   bigint,
   primaryKey,
   index,
+  boolean,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 // Users table (from NextAuth)
@@ -47,7 +49,7 @@ export const sessions = pgTable('sessions', {
 // Profiles table
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role', { enum: ['developer', 'company'] }).notNull(),
+  role: text('role', { enum: ['developer', 'company', 'admin'] }).notNull(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   timezone: text('timezone'),
@@ -140,6 +142,18 @@ export const subscriptions = pgTable('subscriptions', {
   productTier: text('product_tier').notNull(),
   status: text('status').notNull(),
   currentPeriodEnd: timestamp('current_period_end').notNull(),
+})
+
+// Notifications
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  type: text('type', { enum: ['application_status', 'new_message', 'project_update', 'system'] }).notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  data: jsonb('data'), // Additional structured data
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
 // Indexes will be added inline with table definitions in a future update
@@ -236,3 +250,4 @@ export type ProjectSkill = typeof projectSkills.$inferSelect
 export type ProjectApplication = typeof projectApplications.$inferSelect
 export type DeveloperContact = typeof developerContacts.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
+export type Notification = typeof notifications.$inferSelect

@@ -41,6 +41,9 @@ export default async function DashboardPage() {
     return <DeveloperDashboard profile={profile} user={session.user} />
   } else if (profile.role === 'company') {
     return <CompanyDashboard profile={profile} user={session.user} />
+  } else if (profile.role === 'admin') {
+    // For now, admins use the developer dashboard but could have a custom admin dashboard
+    return <DeveloperDashboard profile={profile} user={session.user} />
   }
 
   // Fallback - shouldn't happen but safety net

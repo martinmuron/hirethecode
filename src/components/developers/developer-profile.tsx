@@ -59,7 +59,7 @@ interface DeveloperProfileProps {
     email?: string | null
     image?: string | null
   }
-  userRole: 'developer' | 'company'
+  userRole: 'developer' | 'company' | 'admin'
   userId: string
   isOwner: boolean
 }

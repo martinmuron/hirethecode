@@ -18,9 +18,13 @@ import {
   Send,
   Edit,
   Globe,
-  Users
+  Users,
+  Brain,
+  MessageCircle
 } from 'lucide-react'
 import Link from 'next/link'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SmartMatchResults } from './smart-match-results'
 
 interface ProjectDetailProps {
   project: {
@@ -55,7 +59,7 @@ interface ProjectDetailProps {
     email?: string | null
     image?: string | null
   }
-  userRole: 'developer' | 'company'
+  userRole: 'developer' | 'company' | 'admin'
   userId: string
   isOwner: boolean
 }
@@ -117,9 +121,9 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2">
             {/* Project Header */}
-            <Card>
+            <Card className="mb-6">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -153,8 +157,24 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
               </CardContent>
             </Card>
 
-            {/* Project Details */}
-            <Card>
+            {/* Tabs for different views */}
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Project Details</TabsTrigger>
+                {userRole === 'developer' && !isOwner && (
+                  <TabsTrigger value="apply">Apply</TabsTrigger>
+                )}
+                {isOwner && (
+                  <TabsTrigger value="smart-match">
+                    <Brain className="h-4 w-4 mr-1" />
+                    Smart Match
+                  </TabsTrigger>
+                )}
+              </TabsList>
+
+              <TabsContent value="details" className="space-y-6 mt-6">
+                {/* Project Details */}
+                <Card>
               <CardHeader>
                 <CardTitle>Project Details</CardTitle>
               </CardHeader>
@@ -208,10 +228,13 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
                 )}
               </CardContent>
             </Card>
+              </TabsContent>
 
-            {/* Application Section - Only for developers */}
-            {userRole === 'developer' && !isOwner && project.status === 'open' && (
-              <Card>
+              {/* Application Tab - Only for developers */}
+              {userRole === 'developer' && !isOwner && (
+                <TabsContent value="apply" className="space-y-6 mt-6">
+                  {project.status === 'open' ? (
+                    <Card>
                 <CardHeader>
                   <CardTitle>
                     {hasApplied ? 'Application Submitted' : 'Apply for This Project'}
@@ -249,8 +272,28 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            )}
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-8">
+                          <div className="text-muted-foreground">
+                            This project is no longer accepting applications.
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              )}
+
+              {/* Smart Match Tab - Only for project owners */}
+              {isOwner && (
+                <TabsContent value="smart-match" className="mt-6">
+                  <SmartMatchResults projectId={project.id} />
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
 
           {/* Sidebar */}

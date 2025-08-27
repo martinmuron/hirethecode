@@ -61,7 +61,7 @@ export async function requireActiveSubscription() {
   return subscription
 }
 
-export async function requireRole(role: 'developer' | 'company') {
+export async function requireRole(role: 'developer' | 'company' | 'admin') {
   const profile = await requireProfile()
   if (profile.role !== role) {
     redirect('/dashboard')
@@ -69,10 +69,23 @@ export async function requireRole(role: 'developer' | 'company') {
   return profile
 }
 
-export async function requireActiveSubscriptionAndRole(role: 'developer' | 'company') {
+export async function requireActiveSubscriptionAndRole(role: 'developer' | 'company' | 'admin') {
   const [subscription, profile] = await Promise.all([
     requireActiveSubscription(),
     requireRole(role)
   ])
   return { subscription, profile }
+}
+
+export async function requireAdmin() {
+  return requireRole('admin')
+}
+
+export async function isAdmin() {
+  try {
+    const profile = await getUserProfile()
+    return profile?.role === 'admin'
+  } catch {
+    return false
+  }
 }

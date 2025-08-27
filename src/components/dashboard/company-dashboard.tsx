@@ -17,7 +17,7 @@ interface CompanyDashboardProps {
 export function CompanyDashboard({ profile, user }: CompanyDashboardProps) {
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role="company" />
+      <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Welcome back, {profile.displayName || 'Company'}!</h1>

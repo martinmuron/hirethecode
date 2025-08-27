@@ -25,15 +25,11 @@ export default async function DevelopersPage() {
 
   const profile = userProfile[0]
 
-  // Only companies can search developers
-  if (profile.role !== 'company') {
-    redirect('/dashboard')
-  }
-
   return (
     <DeveloperSearch 
       user={session.user} 
       companyId={profile.id}
+      userRole={profile.role as 'developer' | 'company' | 'admin'}
     />
   )
 }

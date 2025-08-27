@@ -20,7 +20,7 @@ interface DashboardNavProps {
     email?: string | null
     image?: string | null
   }
-  role: 'developer' | 'company'
+  role: 'developer' | 'company' | 'admin'
 }
 
 export function DashboardNav({ user, role }: DashboardNavProps) {
@@ -28,14 +28,18 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Developers', href: '/developers' },
+    { name: 'Projects', href: '/projects' },
     ...(role === 'developer' ? [
-      { name: 'Projects', href: '/projects' },
       { name: 'Profile', href: '/profile' },
-    ] : [
-      { name: 'Developers', href: '/developers' },
-      { name: 'My Projects', href: '/projects' },
+    ] : role === 'company' ? [
+      { name: 'Company Dashboard', href: '/company/dashboard' },
+      { name: 'Manage Projects', href: '/company/projects' },
       { name: 'Company Profile', href: '/profile' },
-    ]),
+    ] : role === 'admin' ? [
+      { name: 'Admin Panel', href: '/admin' },
+      { name: 'Profile', href: '/profile' },
+    ] : []),
   ]
 
   return (

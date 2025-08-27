@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
 interface SubscriptionRequiredProps {
-  role: 'developer' | 'company'
+  role: 'developer' | 'company' | 'admin'
 }
 
 export function SubscriptionRequired({ role }: SubscriptionRequiredProps) {
-  const price = role === 'developer' ? '$99' : '$499'
+  const price = role === 'developer' ? '$99' : role === 'company' ? '$499' : 'Free'
   const features = role === 'developer' 
     ? [
         'Create rich developer profile',
@@ -15,11 +15,17 @@ export function SubscriptionRequired({ role }: SubscriptionRequiredProps) {
         'Receive targeted project matches',
         'Direct messaging with companies'
       ]
-    : [
+    : role === 'company' ? [
         'Post unlimited projects',
         'Search vetted developers',
         'Smart matching system',
         'Direct messaging with developers'
+      ]
+    : [
+        'Full platform access',
+        'Admin panel access',
+        'User management',
+        'System administration'
       ]
 
   return (

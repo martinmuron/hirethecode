@@ -35,6 +35,7 @@ interface DeveloperSearchProps {
     image?: string | null
   }
   companyId: string
+  userRole: 'developer' | 'company' | 'admin'
 }
 
 interface Developer {
@@ -76,7 +77,7 @@ const SKILL_FILTERS = [
   'Go', 'Rust', 'AWS', 'Docker', 'PostgreSQL', 'MongoDB'
 ]
 
-export function DeveloperSearch({ user, companyId }: DeveloperSearchProps) {
+export function DeveloperSearch({ user, companyId, userRole }: DeveloperSearchProps) {
   const [developers, setDevelopers] = useState<Developer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -165,7 +166,7 @@ export function DeveloperSearch({ user, companyId }: DeveloperSearchProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role="company" />
+      <DashboardNav user={user} role={userRole} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

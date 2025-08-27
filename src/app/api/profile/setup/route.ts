@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { users, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { EmailService } from '@/lib/email/email-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,20 @@ export async function POST(request: NextRequest) {
       role: role as 'developer' | 'company',
       displayName,
     })
+
+    // Send welcome email for developers
+    if (role === 'developer') {
+      try {
+        await EmailService.sendWelcomeDeveloperEmail(
+          session.user.email,
+          displayName,
+          userId
+        )
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError)
+        // Don't fail the profile creation if email fails
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
