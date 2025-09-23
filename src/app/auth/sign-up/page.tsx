@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { SignUpForm } from '@/components/auth/sign-up-form'
+// import { useSearchParams } from 'next/navigation'
 
 export const metadata: Metadata = {
   title: 'Sign Up - Hire the Code',
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
 }
 
 export default function SignUpPage() {
+  // const searchParams =  useSearchParams()
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8">
