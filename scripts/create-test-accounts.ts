@@ -17,6 +17,20 @@ const TEST_ACCOUNTS = [
     password: "123456",
     role: 'developer' as const,
     displayName: "Martin Muron"
+  },
+  {
+    name: "Bobbus Mustelidus",
+    email: "flavigula@post.cz",
+    password: "thurkthurkthurk",
+    role: 'admin' as const,
+    displayName: "Bobbus Mustelidus"
+  },
+  {
+    name: "Porridge Pustule",
+    email: "porridge@pustule.net",
+    password: "thurkthurkthurk",
+    role: 'company' as const,
+    displayName: "Porridge Pustule s. r. o."
   }
 ]
 
