@@ -63,6 +63,7 @@ export const developerProfiles = pgTable('developer_profiles', {
   bio: text('bio'),
   rate: decimal('rate', { precision: 10, scale: 2 }),
   availability: text('availability', { enum: ['available', 'busy', 'unavailable'] }).default('available'),
+  approved: text('approved', { enum: ['approved', 'pending', 'rejected'] }).default('pending').notNull(),
   portfolioUrl: text('portfolio_url'),
   githubUrl: text('github_url'),
   websiteUrl: text('website_url'),

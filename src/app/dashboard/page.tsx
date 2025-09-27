@@ -6,6 +6,7 @@ import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { DeveloperDashboard } from '@/components/dashboard/developer-dashboard'
 import { CompanyDashboard } from '@/components/dashboard/company-dashboard'
+import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 import { SubscriptionRequired } from '@/components/dashboard/subscription-required'
 
 export default async function DashboardPage() {
@@ -42,8 +43,7 @@ export default async function DashboardPage() {
   } else if (profile.role === 'company') {
     return <CompanyDashboard profile={profile} user={session.user} />
   } else if (profile.role === 'admin') {
-    // For now, admins use the developer dashboard but could have a custom admin dashboard
-    return <DeveloperDashboard profile={profile} user={session.user} />
+    return <AdminDashboard profile={profile} user={session.user} />
   }
 
   // Fallback - shouldn't happen but safety net
