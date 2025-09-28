@@ -1,31 +1,30 @@
-import { withAuth } from 'next-auth/middleware'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export default withAuth(
-  function middleware(req) {
-    // Middleware logic can be added here if needed
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        // Allow access to auth pages without token
-        if (req.nextUrl.pathname.startsWith('/auth')) {
-          return true
-        }
-        
-        // Require token for protected routes
-        if (req.nextUrl.pathname.startsWith('/dashboard') ||
-            req.nextUrl.pathname.startsWith('/profile') ||
-            req.nextUrl.pathname.startsWith('/projects') ||
-            req.nextUrl.pathname.startsWith('/developers')) {
-          return !!token
-        }
-        
-        // Allow access to public routes
-        return true
-      },
-    },
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET 
+  })
+  
+  const { pathname } = request.nextUrl
+
+  // Allow access to auth pages without token
+  if (pathname.startsWith('/auth')) {
+    return NextResponse.next()
   }
-)
+
+  // Check protected routes
+  const protectedRoutes = ['/dashboard', '/profile', '/projects', '/developers']
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  
+  if (isProtectedRoute && !token) {
+    return NextResponse.redirect(new URL('/auth/sign-in', request.url))
+  }
+  
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [

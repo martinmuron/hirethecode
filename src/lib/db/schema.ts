@@ -222,9 +222,7 @@ export const projectApplications = pgTable('project_applications', {
   message: text('message').notNull(),
   status: text('status', { enum: ['pending', 'accepted', 'rejected'] }).default('pending'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
-  pk: primaryKey(table.projectId, table.developerId),
-}))
+})
 
 export const projectApplicationsRelations = relations(projectApplications, ({ one }) => ({
   project: one(projects, { fields: [projectApplications.projectId], references: [projects.id] }),
