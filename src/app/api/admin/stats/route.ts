@@ -8,10 +8,12 @@ import {
 import { eq, and, count, sql, or, gte } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
+  console.log(`ARE WE GETTING ANYTHING?`)
   try {
     const session = await getServerSession(authOptions)
+    console.log(`/api/admin/stats -> session: ${JSON.stringify(session)}`)
 
-    if(!session?.user?.email) {
+    if(!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized, vole' }, { status: 401 })
     }
 
@@ -175,6 +177,8 @@ export async function GET(request: NextRequest) {
         ? Math.round((closedProjectsResult[0]?.count || 0) / (totalProjectsResult[0]?.count || 0) * 100)
         : 0,
     }
+    
+    console.log(`api/admin/stats -> stats: ${JSON.stringify(stats)}`)
 
     return NextResponse.json({ stats })
   } catch(err) {

@@ -29,6 +29,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log(`auth/config -> credentials: ${JSON.stringify(credentials)}`)
           return null
         }
 
