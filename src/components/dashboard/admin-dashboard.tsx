@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Users, UserCheck, UserX, Building, Briefcase, DollarSign, AlertTriangle } from 'lucide-react'
 import type { Profile } from '@/lib/db/schema'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
+import { headers, cookies } from "next/headers"
 
 interface AdminDashboardProps {
   profile: Profile
@@ -32,7 +33,17 @@ interface AdminDashboardProps {
 }
 
 const fetchStats = async () => {
-  const response = await fetch(process.env.DEV_URL + '/api/admin/stats')
+  const cookieStore = await cookies();
+  console.log(`admin-dashboard.tsx > cookies: ${JSON.stringify(cookieStore, null, "  ")}`)
+  console.log(`admin-dashboard.tsx > dev_url is ${process.env.DEV_URL}`)
+  const response = await fetch(
+    process.env.DEV_URL + '/api/admin/buttock', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieStore.toString(),
+      }
+    },
+  )
   const { stats } = await response.json()
   console.log(`Stats: ${JSON.stringify(stats)}`)
   return stats
