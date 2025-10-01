@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
-import { UserCheck, UserX, Search, ArrowLeft, Calendar, Mail, User, ChevronLeft, ChevronRight } from 'lucide-react'
+import { UserMinus, UserCheck, UserX, Search, ArrowLeft, Calendar, Mail, User, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
@@ -15,6 +15,7 @@ interface Developer {
   displayName: string
   userEmail: string
   profileCreatedAt: string
+  approved: 'pending' | 'approved' | 'rejected'
   headline?: string
   bio?: string
   country?: string
@@ -35,7 +36,7 @@ interface PaginationData {
   totalPages: number
 }
 
-export function DevelopersPage({ adminProfile, user, druh }) {
+export function DevelopersPage({ adminProfile, user, status }) {
   const [developers, setDevelopers] = useState<Developer[]>([])
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
@@ -46,12 +47,18 @@ export function DevelopersPage({ adminProfile, user, druh }) {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  const [druh, setDruh] = useState(status)
 
   useEffect(() => {
     fetchDevelopers(druh)
-  }, [pagination.page])
+  }, [pagination.page, druh])
 
-  const fetchDevelopers = async (druh) => {
+  const changeViewType = (viewType) => {
+    setDruh(viewType)
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }
+
+  const fetchDevelopers = async () => {
     console.log(`FETCH DEVELOPERS! Druh is ${druh}`)
     setLoading(true)
     try {
@@ -101,7 +108,7 @@ export function DevelopersPage({ adminProfile, user, druh }) {
       if (response.ok) {
         toast.success('Developer approved successfully')
         // Refresh the current page
-        fetchPendingDevelopers()
+        fetchDevelopers()
       } else {
         toast.error('Failed to approve developer')
       }
@@ -134,12 +141,43 @@ export function DevelopersPage({ adminProfile, user, druh }) {
       if (response.ok) {
         toast.success('Developer rejected')
         // Refresh the current page
-        fetchPendingDevelopers()
+        fetchDevelopers()
       } else {
         toast.error('Failed to reject developer')
       }
     } catch (error) {
       toast.error('Error rejecting developer')
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(developerId)
+        return newSet
+      })
+    }
+  }
+
+  const handleMakePending = async(developerId: string) => {
+    setProcessingIds(prev => new Set(prev).add(developerId))
+
+    try {
+      const response = await fetch('/api/admin/developers', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          developerId,
+          approved: 'pending'
+        })
+      })
+      if(response.ok) {
+        toast.success('Developer is now pending')
+        fetchDevelopers()
+      } else {
+        toast.error('Error updating developer (handleMakePending)')
+      }
+    } catch(err) {
+      toast.error('Error updating developer (handleMakePending)')
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev)
@@ -167,21 +205,12 @@ export function DevelopersPage({ adminProfile, user, druh }) {
           role="admin" />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading pending developers...</div>
+            <div className="text-muted-foreground">Loading developers...</div>
           </div>
         </div>
       </div>
     )
   }
-
-  /*
-  const developerButtons = (druh: String, profileId: string) => {
-    let jsx;
-    if(druh === 'pending') {
-    } else {
-    }
-  }
-  */
 
   return (
     <div className="min-h-screen bg-background">
@@ -206,13 +235,44 @@ export function DevelopersPage({ adminProfile, user, druh }) {
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Pending Developer Approvals</h1>
+              <h1 className="text-3xl font-bold">
+                {
+                  druh === 'pending' ? 'Pending' : (
+                    druh === 'approved' ? 'Approved' : (
+                      druh === 'rejected' ? 'Rejected' :
+                        'All'
+                    )
+                  )
+                } Developers
+              </h1>
               <p className="text-muted-foreground">
                 Review and approve developer applications ({pagination.total} total pending)
               </p>
             </div>
             
             <div className="relative w-full sm:w-72">
+              <div className="pb-[7px]">
+                <Button 
+                  onClick={() => changeViewType('pending')}
+                  variant="link"
+                  className="text-zinc-500 text-xs pr-[7px] font-bold"
+                >Pending</Button>
+                <Button 
+                  onClick={() => changeViewType('approved')}
+                  variant="link"
+                  className="text-zinc-500 text-xs pr-[7px] font-bold"
+                >Approved</Button>
+                <Button 
+                  onClick={() => changeViewType('rejected')}
+                  variant="link"
+                  className="text-zinc-500 text-xs pr-[7px] font-bold"
+                >Rejected</Button>
+                <Button 
+                  onClick={() => changeViewType('all')}
+                  variant="link"
+                  className="text-zinc-500 text-xs pr-[7px] font-bold"
+                >All</Button>
+              </div>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search developers..."
@@ -253,7 +313,11 @@ export function DevelopersPage({ adminProfile, user, druh }) {
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <h3 className="text-lg font-medium">{developer.displayName}</h3>
-                        <Badge variant="secondary">Pending</Badge>
+                        <Badge variant={
+                            developer.approved === 'pending' ? 'secondary' : developer.approved === 'approved' ? 'default' : 'destructive'
+                        }>
+                            {developer.approved === 'pending' ? 'Pending' : developer.approved === 'approved' ? 'Approved' : 'Rejected'}
+                        </Badge>
                       </div>
                       
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -313,7 +377,7 @@ export function DevelopersPage({ adminProfile, user, druh }) {
                     </div>
                     
                     <div className="flex gap-3">
-                      {druh === 'pending' ? (
+                      {(druh === 'pending') || (druh === 'all' && developer.approved === 'pending') ? (
                         <div>
                           <Button
                             onClick={() => handleApprove(developer.profileId)}
@@ -335,10 +399,12 @@ export function DevelopersPage({ adminProfile, user, druh }) {
                         </div>
                         ) : (
                         <Button
+                          onClick={() => handleMakePending(developer.profileId)}
+                          disabled={processingIds.has(developer.profileId)}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <UserMinus className="h-4 w-4 mr-2" />
-                          {processingIds.has(developer.profileId) ? 'To pending...' : 'Make Pending'}
+                          {processingIds.has(developer.profileId) ? 'Updating...' : 'Make Pending'}
                         </Button>
                       )}
                     </div>

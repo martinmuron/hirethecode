@@ -13,7 +13,7 @@ export default async function PendingDevelopersRoute() {
     where: eq(profiles.id, session.user.id as string),
   })
 
-  console.log(`ADMIN PROFILE: ${JSON.stringify(adminProfile, null, "  ")}`)
+  // console.log(`ADMIN PROFILE: ${JSON.stringify(adminProfile, null, "  ")}`)
 
   if (adminProfile?.role !== 'admin') {
     redirect('/dashboard')

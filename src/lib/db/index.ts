@@ -5,7 +5,7 @@ import postgres from 'postgres';
 let schema: any;
 try {
   schema = require('./schema'); // or your schema path
-  console.log('Schema imported successfully:', Object.keys(schema));
+  // console.log('Schema imported successfully:', Object.keys(schema));
 } catch (error) {
   console.error('Schema import error:', error);
   schema = {};

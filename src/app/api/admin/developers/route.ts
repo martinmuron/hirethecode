@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       where: eq(profiles.id, session.user.id as string),
     })
 
-    console.log(`admin? ${JSON.stringify(adminProfile, null, "  ")}`)
+    // console.log(`admin? ${JSON.stringify(adminProfile, null, "  ")}`)
 
     if (adminProfile?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`ABOUT TO CALL DB`)
+    // console.log(`ABOUT TO CALL DB`)
 
     // Get developers with relations
     const developers = await db

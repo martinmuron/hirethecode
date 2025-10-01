@@ -13,14 +13,14 @@ export default async function DevelopersRoute() {
     where: eq(profiles.id, session.user.id as string),
   })
 
-  console.log(`ADMIN PROFILE: ${JSON.stringify(adminProfile, null, "  ")}`)
+  // console.log(`ADMIN PROFILE: ${JSON.stringify(adminProfile, null, "  ")}`)
 
   if (adminProfile?.role !== 'admin') {
     redirect('/dashboard')
   }
 
   return <DevelopersPage 
-    druh={'pending'}
+    status={'pending'}
     adminProfile={adminProfile} 
     user={session.user}
   />
