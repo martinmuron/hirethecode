@@ -9,35 +9,16 @@ import { eq, and, count, sql, or, gte } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== IMPORT DEBUG ===')
-    console.log('authOptions in admin stats:', typeof authOptions)
-    console.log('authOptions keys:', Object.keys(authOptions))
-    console.log('authOptions.session:', authOptions.session)
-    console.log('authOptions.providers length:', authOptions.providers.length)
-    console.log('authOptions.secret:', authOptions.secret ? 'present' : 'missing')
-
-    console.log('=== ADMIN STATS DEBUG ===')
-    // Debug the exact same way as the working route
     const session = await getServerSession(authOptions)
-    console.log('Admin stats session:', session)
-    console.log('Admin stats session type:', typeof session)
-    console.log('Admin stats session user:', session?.user)
     
     if (!session) {
       console.log('❌ No session in admin stats')
       return NextResponse.json({ error: 'No session' }, { status: 401 })
     }
 
-    console.log('✅ Session found in admin stats:', session.user.id)
-
-    // Check your profiles query
-    console.log('Looking for profile with ID:', session.user.id)
-    
     const adminProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, session.user.id as string),
     })
-
-    console.log('Found admin profile:', adminProfile)
 
     if (!adminProfile) {
       console.log('❌ No profile found for user:', session.user.id)
@@ -201,9 +182,7 @@ export async function GET(request: NextRequest) {
         : 0,
     }
     
-    console.log(`api/admin/stats -> stats: ${JSON.stringify(stats)}`)
-
-    return NextResponse.json({ message: 'Session working!', user: session.user, profile: adminProfile, stats: stats })
+    return NextResponse.json({ stats })
   } catch(err) {
     console.error(`Error fetching stats, vole: ${err}`)
     return NextResponse.json({ error: `Error fetching stats, vole: ${err}` }, { status: 500 })

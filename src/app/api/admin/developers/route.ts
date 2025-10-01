@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import {
   profiles, developerProfiles, users, developerSkills, skills
 } from '@/lib/db/schema'
@@ -9,6 +9,7 @@ import { eq, and, desc, count, sql } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
+    const db = getDb()
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
     const adminProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, session.user.id as string),
     })
+
+    console.log(`admin? ${JSON.stringify(adminProfile, null, "  ")}`)
 
     if (adminProfile?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
@@ -39,6 +42,8 @@ export async function GET(request: NextRequest) {
         eq(developerProfiles.approved, status as 'pending' | 'approved' | 'rejected')
       )
     }
+
+    console.log(`ABOUT TO CALL DB`)
 
     // Get developers with relations
     const developers = await db
@@ -124,6 +129,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/developers - Update developer approval status
 export async function PATCH(request: NextRequest) {
   try {
+    const db = getDb()
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {

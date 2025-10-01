@@ -34,10 +34,8 @@ interface AdminDashboardProps {
 
 const fetchStats = async () => {
   const cookieStore = await cookies();
-  console.log(`admin-dashboard.tsx > cookies: ${JSON.stringify(cookieStore, null, "  ")}`)
-  console.log(`admin-dashboard.tsx > dev_url is ${process.env.DEV_URL}`)
   const response = await fetch(
-    process.env.DEV_URL + '/api/admin/buttock', {
+    process.env.DEV_URL + '/api/admin/stats', {
       headers: {
         'Content-Type': 'application/json',
         'Cookie': cookieStore.toString(),
@@ -45,12 +43,30 @@ const fetchStats = async () => {
     },
   )
   const { stats } = await response.json()
-  console.log(`Stats: ${JSON.stringify(stats)}`)
   return stats
 }
 
-export async function AdminDashboard({ profile, user, pendingDevelopers }: AdminDashboardProps) {
+const fetchPendingDevelopers = async () => {
+  const cookieStore = await cookies();
+  const response = await fetch(
+    `${process.env.DEV_URL}/api/admin/developers?status=pending`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieStore.toString(),
+      }
+    },
+  )
+  const { developers } = await response.json()
+  return developers;
+}
+
+export async function AdminDashboard({ profile, user }: AdminDashboardProps) {
   const stats = await fetchStats()
+  const pendingDevelopers = await fetchPendingDevelopers()
+
+  //console.log(`admin-dashboard > stats: ${JSON.stringify(stats, null, "  ")}`)
+  //console.log(`admin-dashboard > pendingDevelopers: ${JSON.stringify(pendingDevelopers)}`);
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
