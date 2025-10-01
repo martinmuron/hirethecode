@@ -10,7 +10,7 @@ import { UserCheck, UserX, Search, ArrowLeft, Calendar, Mail, User, ChevronLeft,
 import Link from 'next/link'
 import { toast } from 'sonner'
 
-interface PendingDeveloper {
+interface Developer {
   profileId: string
   displayName: string
   userEmail: string
@@ -35,8 +35,8 @@ interface PaginationData {
   totalPages: number
 }
 
-export function PendingDevelopersPage({ adminProfile, user }) {
-  const [developers, setDevelopers] = useState<PendingDeveloper[]>([])
+export function DevelopersPage({ adminProfile, user, druh }) {
+  const [developers, setDevelopers] = useState<Developer[]>([])
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
     limit: 10,
@@ -48,14 +48,15 @@ export function PendingDevelopersPage({ adminProfile, user }) {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetchPendingDevelopers()
+    fetchDevelopers(druh)
   }, [pagination.page])
 
-  const fetchPendingDevelopers = async () => {
+  const fetchDevelopers = async (druh) => {
+    console.log(`FETCH DEVELOPERS! Druh is ${druh}`)
     setLoading(true)
     try {
       const params = new URLSearchParams({
-        status: 'pending',
+        status: druh,
         page: pagination.page.toString(),
         limit: pagination.limit.toString()
       })
@@ -172,6 +173,15 @@ export function PendingDevelopersPage({ adminProfile, user }) {
       </div>
     )
   }
+
+  /*
+  const developerButtons = (druh: String, profileId: string) => {
+    let jsx;
+    if(druh === 'pending') {
+    } else {
+    }
+  }
+  */
 
   return (
     <div className="min-h-screen bg-background">
@@ -303,23 +313,34 @@ export function PendingDevelopersPage({ adminProfile, user }) {
                     </div>
                     
                     <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleApprove(developer.profileId)}
-                        disabled={processingIds.has(developer.profileId)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        {processingIds.has(developer.profileId) ? 'Approving...' : 'Approve'}
-                      </Button>
-                      
-                      <Button
-                        onClick={() => handleReject(developer.profileId)}
-                        disabled={processingIds.has(developer.profileId)}
-                        variant="destructive"
-                      >
-                        <UserX className="h-4 w-4 mr-2" />
-                        {processingIds.has(developer.profileId) ? 'Rejecting...' : 'Reject'}
-                      </Button>
+                      {druh === 'pending' ? (
+                        <div>
+                          <Button
+                            onClick={() => handleApprove(developer.profileId)}
+                            disabled={processingIds.has(developer.profileId)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            {processingIds.has(developer.profileId) ? 'Approving...' : 'Approve'}
+                          </Button>
+                          
+                          <Button
+                            onClick={() => handleReject(developer.profileId)}
+                            disabled={processingIds.has(developer.profileId)}
+                            variant="destructive"
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            {processingIds.has(developer.profileId) ? 'Rejecting...' : 'Reject'}
+                          </Button>
+                        </div>
+                        ) : (
+                        <Button
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          {processingIds.has(developer.profileId) ? 'To pending...' : 'Make Pending'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

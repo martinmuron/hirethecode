@@ -6,6 +6,7 @@ import { Users, UserCheck, UserX, Building, Briefcase, DollarSign, AlertTriangle
 import type { Profile } from '@/lib/db/schema'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import { headers, cookies } from "next/headers"
+import { PendingDeveloperApprovals } from '@/components/dashboard/admin/pending-developer-approvals'
 
 interface AdminDashboardProps {
   profile: Profile
@@ -123,41 +124,7 @@ export async function AdminDashboard({ profile, user }: AdminDashboardProps) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Pending Developer Approvals */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Pending Developer Approvals</CardTitle>
-              <Button asChild size="sm">
-                <Link href="/admin/developers/pending">View All</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {pendingDevelopers && pendingDevelopers.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingDevelopers.slice(0, 3).map((dev) => (
-                    <div key={dev.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{dev.displayName}</div>
-                        <div className="text-sm text-muted-foreground">{dev.email}</div>
-                        {dev.headline && (
-                          <div className="text-xs text-muted-foreground mt-1">{dev.headline}</div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
-                          <UserCheck className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <UserX className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">No pending approvals</p>
-              )}
-            </CardContent>
-          </Card>
+          <PendingDeveloperApprovals pendingDevelopers={pendingDevelopers} />
 
           {/* Quick Actions */}
           <Card>
