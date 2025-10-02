@@ -31,7 +31,8 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
       .where(eq(profiles.id, session.user.id))
       .limit(1)
 
-    if (!userProfile.length || userProfile[0].role !== 'company') {
+    const adminAndCompany = new Set(['admin', 'company'])
+    if (!userProfile.length || !adminAndCompany.has(userProfile[0].role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -110,9 +111,12 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
       .where(
         and(
           eq(profiles.role, 'developer'),
+          eq(developerProfiles.approved, 'approved'),
           inArray(developerSkills.skillId, requiredSkillIds)
         )
       )
+
+    console.log(`SMART-MATCH: matchingDevelopers: ${JSON.stringify(matchingDevelopers, null, "  ")}`)
 
     // Group by developer and calculate match scores
     const developerMatches = new Map()

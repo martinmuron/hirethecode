@@ -41,6 +41,7 @@ interface DeveloperProfile {
   bio: string | null
   rate: string | null
   availability: string | null
+  approved: string | 'pending'
   country: string | null
   portfolioUrl: string | null
   githubUrl: string | null
@@ -97,6 +98,8 @@ export function SmartMatchResults({ projectId }: SmartMatchResultsProps) {
     
     try {
       const response = await fetch(`/api/projects/${projectId}/smart-match`)
+
+      console.log(`WHAT IS MY SMART MATCH RESPONSE? ${JSON.stringify(response)}`)
       
       if (!response.ok) {
         throw new Error('Failed to load smart matches')
