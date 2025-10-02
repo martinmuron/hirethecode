@@ -36,9 +36,6 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
       { name: 'Company Dashboard', href: '/company/dashboard' },
       { name: 'Manage Projects', href: '/company/projects' },
       { name: 'Company Profile', href: '/profile' },
-    ] : role === 'admin' ? [
-      { name: 'Admin Panel', href: '/admin' },
-      { name: 'Profile', href: '/profile' },
     ] : []),
   ]
 
@@ -52,7 +49,7 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
         </div>
 
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="flex items-center space-x-6 text-sm font-medium">
+          <nav className="flex pr-[10px] items-center space-x-6 text-sm font-medium">
             {navigation.map((item) => (
               <Link
                 key={item.href}

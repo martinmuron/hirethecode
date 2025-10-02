@@ -25,8 +25,9 @@ export async function GET(request: NextRequest) {
       .where(eq(profiles.id, session.user.id))
       .limit(1)
 
-    if (!userProfile.length || userProfile[0].role !== 'company') {
-      return NextResponse.json({ error: 'Only companies can search developers' }, { status: 403 })
+    const adminAndCompany = new Set(['admin', 'company'])
+    if (!userProfile.length || !adminAndCompany.has(userProfile[0].role)) {
+      return NextResponse.json({ error: 'Only companies and admin can search developers' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -38,7 +39,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // Build filter conditions
-    let conditions = [eq(profiles.role, 'developer')]
+    let conditions = [
+      eq(profiles.role, 'developer'),
+      eq(developerProfiles.approved, 'approved')
+    ]
 
     // Apply availability filter
     if (availability !== 'all') {
