@@ -9,6 +9,10 @@ import { DevelopersPage } from '@/components/admin/developers-page'
 export default async function DevelopersRoute() {
   const session = await getServerSession(authOptions)
 
+  if (!session?.user?.email) {
+    redirect('/auth/sign-in')
+  }
+
   const adminProfile = await db.query.profiles.findFirst({
     where: eq(profiles.id, session.user.id as string),
   })
