@@ -116,7 +116,6 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
         )
       )
 
-    console.log(`SMART-MATCH: matchingDevelopers: ${JSON.stringify(matchingDevelopers, null, "  ")}`)
 
     // Group by developer and calculate match scores
     const developerMatches = new Map()
@@ -231,14 +230,24 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
           rate: match.rateScore,
           experience: match.experienceScore
         },
-        matchPercentage: match.matchPercentage,
-        recommendationReason: generateRecommendationReason(match, requiredSkillIds.length)
+        matchPercentage: match.matchPercentage
+        // recommendationReason: generateRecommendationReason(match, requiredSkillIds.length)
       }))
+
+    const topMatchesWithRecommendationReason = topMatches.map(tm => {
+      const recommendationReason = generateRecommendationReason(
+        tm, 
+        requiredSkillIds.length
+      )
+      return { ...tm, recommendationReason: recommendationReason }
+    })
+
+    console.log(`TOP MATCHES! ${JSON.stringify(topMatchesWithRecommendationReason, null, "  ")}`)
 
     return NextResponse.json({
       project: project[0],
       requiredSkills: projectRequiredSkills.map(ps => ps.skill),
-      matches: topMatches,
+      matches: topMatchesWithRecommendationReason,
       totalMatches: scoredMatches.length,
       searchCriteria: {
         skillsRequired: requiredSkillIds.length,
