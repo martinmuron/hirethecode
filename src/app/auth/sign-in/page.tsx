@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Sign in to your Hire the Code account',
 }
 
-export default function SignInPage() {
+export default async function SignInPage() {
   const session = await getServerSession(authOptions)
 
   if (session) {
