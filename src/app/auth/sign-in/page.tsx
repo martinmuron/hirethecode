@@ -7,6 +7,12 @@ export const metadata: Metadata = {
 }
 
 export default function SignInPage() {
+  const session = await getServerSession(authOptions)
+
+  if (session) {
+    redirect('/dashboard')
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8">

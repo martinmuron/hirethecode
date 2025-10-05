@@ -2,32 +2,67 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { AlertCircle, CheckCircle } from 'lucide-react'
 
 export function SignUpForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<'developer' | 'company'>('developer')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [success, setSuccess] = useState(false)
+  // const [message, setMessage] = useState('')
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
-    setMessage('')
+    // setMessage('')
+    setSuccess(false)
 
     try {
-      // For now, we'll show a message to use OAuth
-      // In a full implementation, you'd create a custom API route for registration
-      setMessage('Please use GitHub or Google to sign up for now. Email registration coming soon!')
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role
+        }),
+      })
+
+      const data = await response.json()
+
+      if(response.ok) {
+        setSuccess(true)
+
+        const signInResult = await signIn('credentials', {
+          email: email.trim(),
+          password,
+          redirect: false,
+        })
+
+        if(signInResult?.ok) {
+          router.push('/profile/setup')
+        } else {
+          router.push('/auth/sign-in?message=account-created')
+        }
+      } else {
+        setError(data.error || 'Something went wrong. Please try one more time.')
+      }
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError('Something failed. Go have a nice cup of ginger tea and come back in an hour to try again.')
     }
     
     setIsLoading(false)
@@ -36,6 +71,25 @@ export function SignUpForm() {
   const handleOAuthSignUp = async (provider: 'github' | 'google') => {
     setIsLoading(true)
     await signIn(provider, { callbackUrl: '/dashboard' })
+  }
+
+  if(success) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="h-5 w-5" />
+            Account Created!
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your account has been created successfully. Signing you in...
+          </p>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -53,9 +107,11 @@ export function SignUpForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter your display name"
+              disabled={isLoading}
               required
             />
           </div>
+          
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -64,9 +120,11 @@ export function SignUpForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
+              disabled={isLoading}
               required
             />
           </div>
+          
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -74,41 +132,41 @@ export function SignUpForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Enter your password (min 6 characters)"
+              disabled={isLoading}
               required
             />
           </div>
-          <div className="space-y-2">
+          
+          <div className="space-y-3">
             <Label>Account Type</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="developer"
-                  checked={role === 'developer'}
-                  onChange={(e) => setRole(e.target.value as 'developer')}
-                  className="mr-2"
-                />
-                Developer
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="company"
-                  checked={role === 'company'}
-                  onChange={(e) => setRole(e.target.value as 'company')}
-                  className="mr-2"
-                />
-                Company
-              </label>
-            </div>
+            <RadioGroup 
+              value={role} 
+              onValueChange={(value) => setRole(value as 'developer' | 'company')}
+              disabled={isLoading}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="developer" id="developer" />
+                <Label htmlFor="developer" className="cursor-pointer">
+                  Developer - Looking for projects
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="company" id="company" />
+                <Label htmlFor="company" className="cursor-pointer">
+                  Company - Hiring developers
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
+
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-600 border border-red-200 rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              {error}
+            </div>
           )}
-          {message && (
-            <p className="text-sm text-blue-600">{message}</p>
-          )}
+
           <Button 
             type="submit" 
             className="w-full" 
