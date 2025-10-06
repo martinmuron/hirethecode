@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
+    let extantProfileId = null
     // Check if user already has a profile
     const existingProfile = await db.select()
       .from(profiles)
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingProfile.length > 0) {
-      return NextResponse.json({ error: 'Profile already exists' }, { status: 400 })
+      extantProfileId = existingProfile.id
     }
 
     // Create or update user record
@@ -50,6 +51,12 @@ export async function POST(request: NextRequest) {
       id: userId,
       role: role as 'developer' | 'company',
       displayName,
+    }).onConflictDoUpdate({
+      target: profiles.id,
+      set: {
+        role: role as 'developer' | 'company',
+        displayName
+      }
     })
 
     // Send welcome email for developers

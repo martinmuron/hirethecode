@@ -11,11 +11,19 @@ import { Users, Building2 } from 'lucide-react'
 interface ProfileSetupFormProps {
   userEmail: string
   userId: string
+  name: string
+  role: string
 }
 
-export function ProfileSetupForm({ userEmail, userId }: ProfileSetupFormProps) {
-  const [selectedRole, setSelectedRole] = useState<'developer' | 'company' | null>(null)
-  const [displayName, setDisplayName] = useState('')
+export function ProfileSetupForm({ 
+  userEmail, 
+  userId ,
+  name,
+  role
+}: ProfileSetupFormProps) {
+  console.log(`SETUP FORM > userEmail: ${userEmail}, userId: ${userId}, name: ${name}, role: ${role}`)
+  const [selectedRole, setSelectedRole] = useState<'developer' | 'company' | null>(role)
+  const [displayName, setDisplayName] = useState(name ? name : '')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 

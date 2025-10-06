@@ -1,6 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { ProfileSetupForm } from '@/components/profile/profile-setup-form'
 
 export default async function ProfileSetupPage() {
@@ -8,6 +11,20 @@ export default async function ProfileSetupPage() {
   
   if (!session?.user?.email) {
     redirect('/auth/sign-in')
+  }
+
+  const profile = await db.select()
+  .from(profiles)
+  .where(eq(profiles.id, session.user.id))
+  .limit(1)
+
+  console.log(`PROFILE > SETUP > profile: ${JSON.stringify(profile, null, "  ")}`)
+
+  let name = null;
+  let role = null;
+  if(profile) {
+    name = profile[0].displayName
+    role = profile[0].role
   }
 
   return (
@@ -20,7 +37,12 @@ export default async function ProfileSetupPage() {
           </p>
         </div>
         
-        <ProfileSetupForm userEmail={session.user.email} userId={session.user.id} />
+        <ProfileSetupForm 
+          userEmail={session.user.email} 
+          userId={session.user.id} 
+          role={role}
+          name={name}
+        />
       </div>
     </div>
   )
