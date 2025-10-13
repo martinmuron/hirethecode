@@ -70,7 +70,6 @@ export const developerProfiles = pgTable('developer_profiles', {
   country: text('country'),
 })
 
-// Company profiles
 export const companyProfiles = pgTable('company_profiles', {
   userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
   companyName: text('company_name').notNull(),
@@ -79,7 +78,16 @@ export const companyProfiles = pgTable('company_profiles', {
   websiteUrl: text('website_url'),
   industry: text('industry'),
   size: text('size'),
-})
+  experienceLevel: text('experience_level', { 
+    enum: ['junior', 'mid', 'senior', 'lead', 'any'] 
+  }),
+  workStyle: text('work_style', { 
+    enum: ['remote', 'hybrid', 'onsite', 'flexible'] 
+  }),
+}, (table) => ({
+  experienceLevelIdx: index('idx_company_profiles_experience_level').on(table.experienceLevel),
+  workStyleIdx: index('idx_company_profiles_work_style').on(table.workStyle),
+}))
 
 // Skills
 export const skills = pgTable('skills', {
@@ -95,6 +103,20 @@ export const developerSkills = pgTable('developer_skills', {
   level: text('level', { enum: ['beginner', 'intermediate', 'advanced', 'expert'] }).notNull(),
 }, (table) => ({
   pk: primaryKey(table.userId, table.skillId),
+}))
+
+export const companySkills = pgTable('company_skills', {
+  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  skillId: bigint('skill_id', { mode: 'number' }).notNull().references(() => skills.id, { onDelete: 'cascade' }),
+  importance: text('importance', { 
+    enum: ['nice_to_have', 'preferred', 'required'] 
+  }).notNull().default('preferred'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey(table.userId, table.skillId),
+  userIdIdx: index('idx_company_skills_user_id').on(table.userId),
+  skillIdIdx: index('idx_company_skills_skill_id').on(table.skillId),
+  importanceIdx: index('idx_company_skills_importance').on(table.importance),
 }))
 
 // Projects
@@ -178,6 +200,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   developerProfile: one(developerProfiles),
   companyProfile: one(companyProfiles),
   developerSkills: many(developerSkills),
+  companySkills: many(companySkills),
   projects: many(projects),
   subscription: one(subscriptions),
 }))
@@ -186,18 +209,25 @@ export const developerProfilesRelations = relations(developerProfiles, ({ one })
   profile: one(profiles, { fields: [developerProfiles.userId], references: [profiles.id] }),
 }))
 
-export const companyProfilesRelations = relations(companyProfiles, ({ one }) => ({
+export const companyProfilesRelations = relations(companyProfiles, ({ one, many }) => ({
   profile: one(profiles, { fields: [companyProfiles.userId], references: [profiles.id] }),
+  companySkills: many(companySkills), // NEW
 }))
 
 export const skillsRelations = relations(skills, ({ many }) => ({
   developerSkills: many(developerSkills),
+  companySkills: many(companySkills),
   projectSkills: many(projectSkills),
 }))
 
 export const developerSkillsRelations = relations(developerSkills, ({ one }) => ({
   profile: one(profiles, { fields: [developerSkills.userId], references: [profiles.id] }),
   skill: one(skills, { fields: [developerSkills.skillId], references: [skills.id] }),
+}))
+
+export const companySkillsRelations = relations(companySkills, ({ one }) => ({
+  profile: one(profiles, { fields: [companySkills.userId], references: [profiles.id] }),
+  skill: one(skills, { fields: [companySkills.skillId], references: [skills.id] }),
 }))
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -251,6 +281,7 @@ export type DeveloperProfile = typeof developerProfiles.$inferSelect
 export type CompanyProfile = typeof companyProfiles.$inferSelect
 export type Skill = typeof skills.$inferSelect
 export type DeveloperSkill = typeof developerSkills.$inferSelect
+export type CompanySkill = typeof companySkills.$inferSelect
 export type Project = typeof projects.$inferSelect
 export type ProjectSkill = typeof projectSkills.$inferSelect
 export type ProjectApplication = typeof projectApplications.$inferSelect
