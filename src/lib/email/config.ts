@@ -7,8 +7,8 @@ if (!process.env.RESEND_API_KEY) {
 export const resend = new Resend(process.env.RESEND_API_KEY)
 
 export const EMAIL_CONFIG = {
-  from: 'Hire the Code <noreply@hirethecode.com>',
-  replyTo: 'support@hirethecode.com',
+  from: 'Hire the Code <noreply@thurk.org>',
+  replyTo: 'support@thurk.org',
   
   // Base URLs for email links
   baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',

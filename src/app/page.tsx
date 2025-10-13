@@ -20,6 +20,7 @@ export default function Home() {
               <Link href="#features" className="transition-colors hover:text-foreground/80">Features</Link>
               <Link href="#pricing" className="transition-colors hover:text-foreground/80">Pricing</Link>
               <Link href="/auth/sign-in" className="transition-colors hover:text-foreground/80">Sign In</Link>
+              <Link href="/auth/sign-up" className="transition-colors hover:text-foreground/80">Sign Up</Link>
             </nav>
           </div>
         </div>

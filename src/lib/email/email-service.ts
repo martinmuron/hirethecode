@@ -3,6 +3,7 @@ import { render } from '@react-email/render'
 import { ApplicationStatusEmail } from './templates/application-status'
 import { NewMessageEmail } from './templates/new-message'
 import { WelcomeDeveloperEmail } from './templates/welcome-developer'
+import { WelcomeCompanyEmail} from './templates/welcome-company'
 
 export class EmailService {
   /**
@@ -111,6 +112,40 @@ export class EmailService {
         from: EMAIL_CONFIG.from,
         to,
         subject: `🚀 Welcome to Hire the Code, ${developerName}!`,
+        html: emailHtml,
+        replyTo: EMAIL_CONFIG.replyTo,
+      })
+
+      console.log(`Welcome email sent to ${to}`)
+      return true
+    } catch (error) {
+      console.error('Error sending welcome email:', error)
+      return false
+    }
+  }
+
+  /**
+   * Send welcome email to new company
+   */
+  static async sendWelcomeCompanyEmail(
+    to: string,
+    companyName: string,
+    userId: string
+  ) {
+    try {
+      const profileUrl = `${EMAIL_CONFIG.baseUrl}/profile`
+      
+      const emailHtml = await render(
+        WelcomeCompanyEmail({
+          companyName,
+          profileUrl,
+        })
+      )
+
+      await resend.emails.send({
+        from: EMAIL_CONFIG.from,
+        to,
+        subject: `🚀 Welcome to Hire the Code, ${companyName}!`,
         html: emailHtml,
         replyTo: EMAIL_CONFIG.replyTo,
       })

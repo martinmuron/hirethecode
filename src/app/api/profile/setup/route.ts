@@ -71,6 +71,17 @@ export async function POST(request: NextRequest) {
         console.error('Failed to send welcome email:', emailError)
         // Don't fail the profile creation if email fails
       }
+    } else if(role === 'company') {
+      console.log(`SEND EMAIL TO COMPANY`)
+      try {
+        await EmailService.sendWelcomeCompanyEmail(
+          session.user.email,
+          displayName,
+          userId
+        )
+      } catch(emailError) {
+        console.error('Failed to send welcome email to company:', emailError)
+      }
     }
 
     return NextResponse.json({ success: true })
