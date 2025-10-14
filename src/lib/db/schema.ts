@@ -84,6 +84,10 @@ export const companyProfiles = pgTable('company_profiles', {
   workStyle: text('work_style', { 
     enum: ['remote', 'hybrid', 'onsite', 'flexible'] 
   }),
+  workEnvironment: text('work_environment'),
+  benefits: text('benefits'),
+  teamSize: text('team_size'),
+  growth: text('growth'),
 }, (table) => ({
   experienceLevelIdx: index('idx_company_profiles_experience_level').on(table.experienceLevel),
   workStyleIdx: index('idx_company_profiles_work_style').on(table.workStyle),
