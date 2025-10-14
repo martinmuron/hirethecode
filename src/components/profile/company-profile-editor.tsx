@@ -18,7 +18,7 @@ import {
   SelectValue 
 } from '@/components/ui/select'
 import { Building2, Save, Plus, X } from 'lucide-react'
-import type { Profile, User, CompanyProfile } from '@/lib/db/schema'
+import type { Profile, User, CompanyProfile, companySkillsTable } from '@/lib/db/schema'
 
 interface CompanyProfileEditorProps {
   profile: Profile
@@ -103,10 +103,12 @@ export function CompanyProfileEditor({
     label: string
     importance: 'nice_to_have' | 'preferred' | 'required'
   }>>(companySkills.map(skill => ({
-    label: skill.label,
+    label: skill.skill.label,
     importance: skill.importance
   })))
   const [newSkill, setNewSkill] = useState('')
+
+  console.log(`COMPANY PROFILE EDITOR -> companySkills -> ${JSON.stringify(selectedSkills, null, 2)}`)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

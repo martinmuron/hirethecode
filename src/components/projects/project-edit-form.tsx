@@ -51,7 +51,8 @@ const CURRENCIES = [
   { value: 'EUR', label: 'EUR (€)' },
   { value: 'GBP', label: 'GBP (£)' },
   { value: 'CAD', label: 'CAD (C$)' },
-  { value: 'AUD', label: 'AUD (A$)' }
+  { value: 'AUD', label: 'AUD (A$)' },
+  { value: 'CZK', label: 'CZK (Kč)' }
 ]
 
 const TIMELINE_OPTIONS = [
