@@ -99,6 +99,10 @@ export function CompanyProfileEditor({
   const [size, setSize] = useState(companyProfile?.size || '')
   const [experienceLevel, setExperienceLevel] = useState(companyProfile?.experienceLevel || '')
   const [workStyle, setWorkStyle] = useState(companyProfile?.workStyle || '')
+  const [workEnvironment, setWorkEnvironment] = useState(companyProfile?.workEnvironment || '')
+  const [benefits, setBenefits] = useState(companyProfile?.benefits || '')
+  const [teamSize, setTeamSize] = useState(companyProfile?.teamSize || '')
+  const [growth, setGrowth] = useState(companyProfile?.growth || '')
   const [selectedSkills, setSelectedSkills] = useState<Array<{
     label: string
     importance: 'nice_to_have' | 'preferred' | 'required'
@@ -127,6 +131,10 @@ export function CompanyProfileEditor({
           size: size || null,
           experienceLevel: experienceLevel || null,
           workStyle: workStyle || null,
+          workEnvironment: workEnvironment || null,
+          benefits: benefits || null,
+          teamSize: teamSize || null,
+          growth: growth || null,
           skills: selectedSkills,
         }),
       })
@@ -419,39 +427,60 @@ export function CompanyProfileEditor({
             </CardContent>
           </Card>
 
-          {/* Company Culture */}
           <Card>
             <CardHeader>
               <CardTitle>Company Culture & Benefits</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-semibold mb-2">Highlight Your Company</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  These details will appear on your company profile and help attract top developers.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Work Environment:</span>
-                    <p className="text-muted-foreground mt-1">Remote-first, flexible hours, modern tech stack</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Benefits:</span>
-                    <p className="text-muted-foreground mt-1">Health insurance, equity, professional development</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Team Size:</span>
-                    <p className="text-muted-foreground mt-1">Engineering team of 15-25 developers</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Growth:</span>
-                    <p className="text-muted-foreground mt-1">Series B funded, 200% YoY growth</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="workEnvironment">Work Environment</Label>
+                  <Textarea
+                    id="workEnvironment"
+                    value={workEnvironment}
+                    onChange={(e) => setWorkEnvironment(e.target.value)}
+                    placeholder="e.g., Remote-first, flexible hours, modern tech stack, collaborative atmosphere..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="benefits">Benefits & Perks</Label>
+                  <Textarea
+                    id="benefits"
+                    value={benefits}
+                    onChange={(e) => setBenefits(e.target.value)}
+                    placeholder="e.g., Health insurance, equity, professional development budget, unlimited PTO..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="teamSize">Team Structure</Label>
+                  <Input
+                    id="teamSize"
+                    value={teamSize}
+                    onChange={(e) => setTeamSize(e.target.value)}
+                    placeholder="e.g., Engineering team of 15-25 developers"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="growth">Company Growth</Label>
+                  <Input
+                    id="growth"
+                    value={growth}
+                    onChange={(e) => setGrowth(e.target.value)}
+                    placeholder="e.g., Series B funded, 200% YoY growth"
+                  />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                💡 Pro tip: Complete company information leads to 3x more quality applications
-              </p>
+
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-semibold mb-2">💡 Why This Matters</h4>
+                <p className="text-sm text-muted-foreground">
+                  Detailed company culture information helps developers understand your work environment 
+                  and leads to 3x more quality applications from candidates who are genuinely interested 
+                  in your company values.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
       size,
       experienceLevel,
       workStyle,
+      workEnvironment,
+      benefits,
+      teamSize,
+      growth,
       skills: skillsInput
     } = await request.json()
 
@@ -58,6 +62,10 @@ export async function POST(request: NextRequest) {
       size: size || null,
       experienceLevel: experienceLevel || 'any',
       workStyle: workStyle || 'flexible',
+      workEnvironment: workEnvironment || null,
+      benefits: benefits || null,
+      teamSize: teamSize || null,
+      growth: growth || null,
     }
 
     if(existingProfile.length > 0) {
