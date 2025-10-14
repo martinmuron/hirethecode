@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
-import { profiles, companyProfiles } from '@/lib/db/schema'
+import { 
+  profiles, 
+  companyProfiles,
+  companySkills,
+  skills as skillsTable
+} from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function POST(request: NextRequest) {
@@ -20,6 +25,9 @@ export async function POST(request: NextRequest) {
       websiteUrl,
       industry,
       size,
+      experienceLevel,
+      workStyle,
+      skills: skillsInput
     } = await request.json()
 
     const userId = session.user.id
@@ -36,24 +44,70 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(profiles.id, userId))
 
-    // Update or create company profile
-    await db.insert(companyProfiles).values({
+    const existingProfile = await db.select()
+      .from(companyProfiles)
+      .where(eq(companyProfiles.userId, userId))
+      .limit(1)
+
+    const profileData = {
       userId,
       companyName: companyName.trim(),
       about: about || null,
       websiteUrl: websiteUrl || null,
       industry: industry || null,
       size: size || null,
-    }).onConflictDoUpdate({
-      target: companyProfiles.userId,
-      set: {
-        companyName: companyName.trim(),
-        about: about || null,
-        websiteUrl: websiteUrl || null,
-        industry: industry || null,
-        size: size || null,
+      experienceLevel: experienceLevel || 'any',
+      workStyle: workStyle || 'flexible',
+    }
+
+    if(existingProfile.length > 0) {
+      await db.update(companyProfiles)
+        .set(profileData)
+        .where(eq(companyProfiles.userId, userId))
+    } else {
+      await db.insert(companyProfiles)
+        .values(profileData)
+    }
+
+    if(skillsInput && Array.isArray(skillsInput)) {
+      console.log(`api/profile/company -> POST -> what are the skills? ${JSON.stringify(skillsInput, null, "  ")}`);
+      
+      await db.delete(companySkills)
+        .where(eq(companySkills.userId, userId))
+
+      for(const skillInput of skillsInput) {
+        try {
+          const existingSkill = await db.select()
+            .from(skillsTable)
+            .where(eq(skillsTable.label, skillInput.label.trim()))
+            .limit(1)
+
+          let skillId: number
+
+          if(existingSkill.length > 0) {
+            skillId = existingSkill[0].id
+          } else {
+            const newSkill = await db.insert(skillsTable)
+              .values({
+                label: skillInput.label.trim(),
+                slug: skillInput.label.trim().toLowerCase().replace(/[^a-z0-9]/g, '-')
+              })
+              .returning({ id: skillsTable.id })
+
+            skillId = newSkill[0].id
+          }
+
+          await db.insert(companySkills)
+          .values({
+            userId,
+            skillId,
+            importance: skillInput.importance || 'preferred'
+          })
+        } catch(skillError) {
+          console.error(`Error processing skill ${skillInput.label}:`, skillError)
+        }
       }
-    })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
