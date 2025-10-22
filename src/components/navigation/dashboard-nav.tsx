@@ -20,7 +20,7 @@ interface DashboardNavProps {
     email?: string | null
     image?: string | null
   }
-  role: 'developer' | 'company' | 'admin'
+  role: 'developer' | 'company' | 'admin' | 'seeker'
 }
 
 export function DashboardNav({ user, role }: DashboardNavProps) {
@@ -34,8 +34,10 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
       { name: 'Profile', href: '/profile' },
     ] : role === 'company' ? [
       { name: 'Company Dashboard', href: '/company/dashboard' },
-      { name: 'Manage Projects', href: '/company/projects' },
       { name: 'Company Profile', href: '/profile' },
+    ] : role === 'seeker' ? [
+      { name: 'Your Dashboard', href: '/seeker/dashboard' },
+      { name: 'Your Profile', href: '/profile' }
     ] : []),
   ]
 

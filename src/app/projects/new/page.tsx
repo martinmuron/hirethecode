@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { ProjectPostingForm } from '@/components/projects/project-posting-form'
+import { SeekerProjectForm } from '@/components/projects/seeker-project-form'
 
 export default async function NewProjectPage() {
   const session = await getServerSession(authOptions)
@@ -25,15 +25,14 @@ export default async function NewProjectPage() {
 
   const profile = userProfile[0]
 
-  // Only companies can post projects
-  if (profile.role !== 'company') {
+  if (profile.role !== 'seeker') {
     redirect('/dashboard')
   }
 
   return (
-    <ProjectPostingForm 
+    <SeekerProjectForm
       user={session.user} 
-      companyId={profile.id}
+      seekerId={profile.id}
     />
   )
 }

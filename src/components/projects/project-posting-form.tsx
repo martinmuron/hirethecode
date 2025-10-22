@@ -24,7 +24,7 @@ interface ProjectPostingFormProps {
     email?: string | null
     image?: string | null
   }
-  companyId: string
+  seekerId: string
 }
 
 const COMMON_SKILLS = [
@@ -59,7 +59,7 @@ const LOCATION_PREFERENCES = [
   { value: 'flexible', label: 'Flexible' }
 ]
 
-export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps) {
+export function ProjectPostingForm({ user, seekerId }: ProjectPostingFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -121,7 +121,7 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role="company" />
+      <DashboardNav user={user} role="seeker" />
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">

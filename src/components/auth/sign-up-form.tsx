@@ -15,17 +15,15 @@ export function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'developer' | 'company'>('developer')
+  const [role, setRole] = useState<'developer' | 'company' | 'seeker'>('seeker')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  // const [message, setMessage] = useState('')
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
-    // setMessage('')
     setSuccess(false)
 
     try {
@@ -122,6 +120,7 @@ export function SignUpForm() {
               placeholder="Enter your email"
               disabled={isLoading}
               required
+              autoComplete="email"
             />
           </div>
           
@@ -135,29 +134,68 @@ export function SignUpForm() {
               placeholder="Enter your password (min 6 characters)"
               disabled={isLoading}
               required
+              autoComplete="new-password"
             />
           </div>
           
           <div className="space-y-3">
             <Label>Account Type</Label>
-            <RadioGroup 
-              value={role} 
-              onValueChange={(value) => setRole(value as 'developer' | 'company')}
-              disabled={isLoading}
-            >
+            <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="developer" id="developer" />
-                <Label htmlFor="developer" className="cursor-pointer">
-                  Developer - Looking for projects
+                <input
+                  type="radio"
+                  id="developer"
+                  name="role"
+                  value="developer"
+                  checked={role === 'developer'}
+                  onChange={(e) => setRole(e.target.value as 'developer' | 'company' | 'seeker')}
+                  disabled={isLoading}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                />
+                <Label htmlFor="developer" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">Developer</div>
+                    <div className="text-xs text-muted-foreground">Looking for freelance projects</div>
+                  </div>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="company" id="company" />
-                <Label htmlFor="company" className="cursor-pointer">
-                  Company - Hiring developers
+                <input
+                  type="radio"
+                  id="company"
+                  name="role"
+                  value="company"
+                  checked={role === 'company'}
+                  onChange={(e) => setRole(e.target.value as 'developer' | 'company' | 'seeker')}
+                  disabled={isLoading}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                />
+                <Label htmlFor="company" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">Development Company</div>
+                    <div className="text-xs text-muted-foreground">Offering development services with a team</div>
+                  </div>
                 </Label>
               </div>
-            </RadioGroup>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="seeker"
+                  name="role"
+                  value="seeker"
+                  checked={role === 'seeker'}
+                  onChange={(e) => setRole(e.target.value as 'developer' | 'company' | 'seeker')}
+                  disabled={isLoading}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                />
+                <Label htmlFor="seeker" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">Project Seeker</div>
+                    <div className="text-xs text-muted-foreground">Looking to hire developers or companies for projects</div>
+                  </div>
+                </Label>
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -202,6 +240,12 @@ export function SignUpForm() {
           >
             Google
           </Button>
+        </div>
+        <div className="text-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <a href="/auth/sign-in" className="text-primary hover:underline font-medium">
+            Sign in here
+          </a>
         </div>
       </CardContent>
     </Card>

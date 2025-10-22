@@ -8,7 +8,7 @@ interface RegisterRequest {
   name: string
   email: string
   password: string
-  role: 'developer' | 'company'
+  role: 'developer' | 'company' | 'seeker'
 }
 
 export async function POST(request: NextRequest) {
@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
     if (!name?.trim() || !email?.trim() || !password?.trim() || !role) {
       return NextResponse.json(
         { error: 'All fields are required' },
+        { status: 400 }
+      )
+    }
+    //
+    // Validate role
+    if (!['developer', 'company', 'seeker'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid account type' },
         { status: 400 }
       )
     }
@@ -95,6 +103,7 @@ export async function POST(request: NextRequest) {
           id: newUser[0].id,
           email: newUser[0].email,
           name: newUser[0].name,
+          role: role,
         }
       },
       { status: 201 }

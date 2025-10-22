@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import type { Profile } from '@/lib/db/schema'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
+import { Bell } from 'lucide-react'
 
 interface DeveloperDashboardProps {
   profile: Profile
@@ -12,9 +13,10 @@ interface DeveloperDashboardProps {
     email?: string | null
     image?: string | null
   }
+  unreadNotificationCount?: number
 }
 
-export function DeveloperDashboard({ profile, user }: DeveloperDashboardProps) {
+export function DeveloperDashboard({ profile, user, unreadNotificationCount = 0 }: DeveloperDashboardProps) {
   return (
     <div className="min-h-screen bg-background">
       <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
@@ -74,6 +76,21 @@ export function DeveloperDashboard({ profile, user }: DeveloperDashboardProps) {
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
                 <Link href="/billing">Billing Settings</Link>
+              </Button>
+              {/* NEW: Notifications Button */}
+              <Button asChild variant="outline" className="w-full justify-start relative">
+                <Link href="/notifications" className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  Notifications
+                  {unreadNotificationCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    >
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </Badge>
+                  )}
+                </Link>
               </Button>
             </CardContent>
           </Card>

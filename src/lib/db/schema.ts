@@ -4,6 +4,7 @@ import {
   uuid,
   text,
   timestamp,
+  integer,
   decimal,
   bigserial,
   bigint,
@@ -46,13 +47,26 @@ export const sessions = pgTable('sessions', {
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 })
 
-// Profiles table
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role', { enum: ['developer', 'company', 'admin'] }).notNull(),
+  role: text('role', { enum: ['developer', 'company', 'admin', 'seeker'] }).notNull(), // Added seeker
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   timezone: text('timezone'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const seekerProfiles = pgTable('seeker_profiles', {
+  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  organizationName: text('organization_name'),
+  industry: text('industry'),
+  budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
+  budgetMax: decimal('budget_max', { precision: 10, scale: 2 }),
+  currency: text('currency').default('USD'),
+  companySize: text('company_size', { 
+    enum: ['individual', 'startup', 'small', 'medium', 'large', 'enterprise'] 
+  }),
+  typicalProjectTypes: text('typical_project_types').array(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -88,10 +102,13 @@ export const companyProfiles = pgTable('company_profiles', {
   benefits: text('benefits'),
   teamSize: text('team_size'),
   growth: text('growth'),
-}, (table) => ({
-  experienceLevelIdx: index('idx_company_profiles_experience_level').on(table.experienceLevel),
-  workStyleIdx: index('idx_company_profiles_work_style').on(table.workStyle),
-}))
+  // NEW FIELDS:
+  actualTeamSize: integer('team_size'), // Actual number
+  hourlyRateMin: decimal('hourly_rate_min', { precision: 10, scale: 2 }),
+  hourlyRateMax: decimal('hourly_rate_max', { precision: 10, scale: 2 }),
+  currentCapacity: integer('current_capacity').default(0),
+  maxProjects: integer('max_projects').default(3),
+})
 
 // Skills
 export const skills = pgTable('skills', {
@@ -123,10 +140,9 @@ export const companySkills = pgTable('company_skills', {
   importanceIdx: index('idx_company_skills_importance').on(table.importance),
 }))
 
-// Projects
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  seekerId: uuid('seeker_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }), // Changed from companyId
   title: text('title').notNull(),
   description: text('description').notNull(),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
@@ -135,7 +151,12 @@ export const projects = pgTable('projects', {
   timeline: text('timeline'),
   locationPref: text('location_pref'),
   status: text('status', { enum: ['open', 'in_progress', 'closed'] }).notNull().default('open'),
+  // NEW FIELDS for Claude analysis
+  complexity: text('complexity', { enum: ['simple', 'moderate', 'complex', 'enterprise'] }),
+  estimatedTimeline: text('estimated_timeline'),
+  recommendedFor: text('recommended_for', { enum: ['freelancer', 'company', 'either'] }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
 // Project skills junction table
@@ -209,6 +230,11 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   subscription: one(subscriptions),
 }))
 
+export const seekerProfilesRelations = relations(seekerProfiles, ({ one, many }) => ({
+  profile: one(profiles, { fields: [seekerProfiles.userId], references: [profiles.id] }),
+  projects: many(projects),
+}))
+
 export const developerProfilesRelations = relations(developerProfiles, ({ one }) => ({
   profile: one(profiles, { fields: [developerProfiles.userId], references: [profiles.id] }),
 }))
@@ -235,8 +261,9 @@ export const companySkillsRelations = relations(companySkills, ({ one }) => ({
 }))
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
-  company: one(profiles, { fields: [projects.companyId], references: [profiles.id] }),
+  seeker: one(profiles, { fields: [projects.seekerId], references: [profiles.id] }), // Changed from company
   projectSkills: many(projectSkills),
+  applications: many(projectApplications),
 }))
 
 export const projectSkillsRelations = relations(projectSkills, ({ one }) => ({
@@ -292,3 +319,4 @@ export type ProjectApplication = typeof projectApplications.$inferSelect
 export type DeveloperContact = typeof developerContacts.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
 export type Notification = typeof notifications.$inferSelect
+export type SeekerProfile = typeof seekerProfiles.$inferSelect

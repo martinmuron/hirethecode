@@ -13,14 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user is a company
+    // Verify user is a seeker
     const userProfile = await db.select()
       .from(profiles)
       .where(eq(profiles.id, session.user.id))
       .limit(1)
 
-    if (!userProfile.length || userProfile[0].role !== 'company') {
-      return NextResponse.json({ error: 'Only companies can post projects' }, { status: 403 })
+    if (!userProfile.length || userProfile[0].role !== 'seeker') {
+      return NextResponse.json({ error: 'Only seekers can post projects' }, { status: 403 })
     }
 
     const {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Create the project
     const [project] = await db.insert(projects).values({
-      companyId: session.user.id,
+      seekerId: session.user.id,
       title: title.trim(),
       description: description.trim(),
       budgetMin: budgetMin ? budgetMin.toString() : null,
@@ -103,13 +103,13 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const status = searchParams.get('status') || 'open'
 
-    // Get projects with company information
+    // Get projects with seeker information
     const projectList = await db.select({
       project: projects,
-      company: profiles,
+      seeker: profiles,
     })
       .from(projects)
-      .innerJoin(profiles, eq(projects.companyId, profiles.id))
+      .innerJoin(profiles, eq(projects.seekerId, profiles.id))
       .where(eq(projects.status, status as any))
       .orderBy(projects.createdAt)
       .limit(limit)
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     // Get skills for each project
     const projectsWithSkills = await Promise.all(
-      projectList.map(async ({ project, company }) => {
+      projectList.map(async ({ project, seeker }) => {
         const projectSkillsData = await db.select({
           skill: skills
         })
@@ -127,10 +127,10 @@ export async function GET(request: NextRequest) {
 
         return {
           ...project,
-          company: {
-            id: company.id,
-            displayName: company.displayName,
-            avatarUrl: company.avatarUrl,
+          seeker: {
+            id: seeker.id,
+            displayName: seeker.displayName,
+            avatarUrl: seeker.avatarUrl,
           },
           skills: projectSkillsData.map(ps => ps.skill)
         }
