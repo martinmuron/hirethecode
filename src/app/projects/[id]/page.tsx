@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { projects, profiles, projectSkills, skills, companyProfiles } from '@/lib/db/schema'
+import { projects, profiles, projectSkills, skills, seekerProfiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { ProjectDetail } from '@/components/projects/project-detail'
 import { notFound } from 'next/navigation'
@@ -16,7 +16,7 @@ interface ProjectPageProps {
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user?.email) {
     redirect('/auth/sign-in')
   }
@@ -33,15 +33,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const profile = userProfile[0]
 
-  // Get project with company details
+  // Get project with seeker details (UPDATED from company to seeker)
   const projectData = await db.select({
     project: projects,
-    company: profiles,
-    companyProfile: companyProfiles,
+    seeker: profiles,
+    seekerProfile: seekerProfiles,
   })
     .from(projects)
-    .innerJoin(profiles, eq(projects.companyId, profiles.id))
-    .leftJoin(companyProfiles, eq(projects.companyId, companyProfiles.userId))
+    .innerJoin(profiles, eq(projects.seekerId, profiles.id)) // UPDATED: seekerId instead of companyId
+    .leftJoin(seekerProfiles, eq(projects.seekerId, seekerProfiles.userId))
     .where(eq(projects.id, id))
     .limit(1)
 
@@ -49,7 +49,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound()
   }
 
-  const { project, company, companyProfile } = projectData[0]
+  const { project, seeker, seekerProfile } = projectData[0]
 
   // Get project skills
   const projectSkillsData = await db.select({
@@ -62,13 +62,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const projectWithDetails = {
     ...project,
     createdAt: project.createdAt.toISOString(),
-    company: {
-      ...company,
-      companyName: companyProfile?.companyName || null,
-      about: companyProfile?.about || null,
-      websiteUrl: companyProfile?.websiteUrl || null,
-      industry: companyProfile?.industry || null,
-      size: companyProfile?.size || null,
+    seeker: { // UPDATED: seeker instead of company
+      ...seeker,
+      organizationName: seekerProfile?.organizationName || null,
+      industry: seekerProfile?.industry || null,
+      companySize: seekerProfile?.companySize || null,
     },
     skills: projectSkillsData.map(ps => ps.skill)
   }
@@ -77,9 +75,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     <ProjectDetail 
       project={projectWithDetails}
       user={session.user} 
-      userRole={profile.role}
+      userRole={profile.role as 'developer' | 'company' | 'admin' | 'seeker'} // Added seeker
       userId={profile.id}
-      isOwner={profile.id === project.companyId}
+      isOwner={profile.id === project.seekerId} // UPDATED: seekerId instead of companyId
     />
   )
 }

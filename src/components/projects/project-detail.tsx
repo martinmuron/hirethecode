@@ -9,7 +9,7 @@ import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { 
-  Building2, 
+  User, 
   MapPin, 
   Clock, 
   DollarSign, 
@@ -20,11 +20,14 @@ import {
   Globe,
   Users,
   Brain,
-  MessageCircle
+  MessageCircle,
+  Building2,
+  Code,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SmartMatchResults } from './smart-match-results'
+import { SmartMatchDisplay } from './smart-match-display' // UPDATED: Use our new component
 
 interface ProjectDetailProps {
   project: {
@@ -37,16 +40,17 @@ interface ProjectDetailProps {
     timeline: string | null
     locationPref: string | null
     status: string
+    // NEW: Claude analysis fields
+    complexity: 'simple' | 'moderate' | 'complex' | 'enterprise' | null
+    recommendedFor: 'freelancer' | 'company' | 'either' | null
     createdAt: string
-    company: {
+    seeker: { // UPDATED: seeker instead of company
       id: string
       displayName: string | null
       avatarUrl: string | null
-      companyName: string | null
-      about: string | null
-      websiteUrl: string | null
+      organizationName: string | null
       industry: string | null
-      size: string | null
+      companySize: string | null
     }
     skills: Array<{
       id: number
@@ -59,7 +63,7 @@ interface ProjectDetailProps {
     email?: string | null
     image?: string | null
   }
-  userRole: 'developer' | 'company' | 'admin'
+  userRole: 'developer' | 'company' | 'admin' | 'seeker' // Added seeker
   userId: string
   isOwner: boolean
 }
@@ -108,6 +112,46 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
     })
   }
 
+  const getComplexityBadge = (complexity: string | null) => {
+    if (!complexity) return null
+    
+    const colors = {
+      simple: 'bg-green-100 text-green-700 border-green-300',
+      moderate: 'bg-blue-100 text-blue-700 border-blue-300',
+      complex: 'bg-orange-100 text-orange-700 border-orange-300',
+      enterprise: 'bg-purple-100 text-purple-700 border-purple-300'
+    }
+
+    return (
+      <Badge variant="outline" className={colors[complexity as keyof typeof colors]}>
+        {complexity} project
+      </Badge>
+    )
+  }
+
+  const getRecommendedForBadge = (recommendedFor: string | null) => {
+    if (!recommendedFor || recommendedFor === 'either') return null
+    
+    return (
+      <Badge variant="outline" className="flex items-center gap-1">
+        {recommendedFor === 'freelancer' ? (
+          <>
+            <Code className="h-3 w-3" />
+            Best for freelancers
+          </>
+        ) : (
+          <>
+            <Building2 className="h-3 w-3" />
+            Best for teams
+          </>
+        )}
+      </Badge>
+    )
+  }
+
+  // UPDATED: Both developers AND companies can apply now (not just developers)
+  const canApply = (userRole === 'developer' || userRole === 'company') && !isOwner
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardNav user={user} role={userRole} />
@@ -126,9 +170,9 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{project.title}</CardTitle>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl mb-3">{project.title}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-2">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         <span>Posted {formatDate(project.createdAt)}</span>
@@ -136,7 +180,17 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
                       <Badge variant={project.status === 'open' ? 'default' : 'secondary'}>
                         {project.status}
                       </Badge>
+                      {getComplexityBadge(project.complexity)}
+                      {getRecommendedForBadge(project.recommendedFor)}
                     </div>
+                    
+                    {/* NEW: AI Analysis Indicator */}
+                    {(project.complexity || project.recommendedFor) && (
+                      <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-fit">
+                        <Sparkles className="h-3 w-3" />
+                        <span>AI-analyzed project</span>
+                      </div>
+                    )}
                   </div>
                   {isOwner && (
                     <Button size="sm" variant="outline" asChild>
@@ -161,7 +215,7 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="details">Project Details</TabsTrigger>
-                {userRole === 'developer' && !isOwner && (
+                {canApply && ( // UPDATED: Both developers and companies can apply
                   <TabsTrigger value="apply">Apply</TabsTrigger>
                 )}
                 {isOwner && (
@@ -175,103 +229,106 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
               <TabsContent value="details" className="space-y-6 mt-6">
                 {/* Project Details */}
                 <Card>
-              <CardHeader>
-                <CardTitle>Project Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    <div>
-                      <div className="font-medium">Budget</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatBudget(project.budgetMin, project.budgetMax, project.currency)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {project.timeline && (
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <div className="font-medium">Timeline</div>
-                        <div className="text-sm text-muted-foreground">{project.timeline}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {project.locationPref && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-red-600" />
-                      <div>
-                        <div className="font-medium">Location</div>
-                        <div className="text-sm text-muted-foreground capitalize">
-                          {project.locationPref}
+                  <CardHeader>
+                    <CardTitle>Project Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="h-5 w-5 text-green-600" />
+                        <div>
+                          <div className="font-medium">Budget</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatBudget(project.budgetMin, project.budgetMax, project.currency)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* Required Skills */}
-                {project.skills.length > 0 && (
-                  <div>
-                    <div className="font-medium mb-2">Required Skills</div>
-                    <div className="flex flex-wrap gap-2">
-                      {project.skills.map((skill) => (
-                        <Badge key={skill.id} variant="secondary">
-                          {skill.label}
-                        </Badge>
-                      ))}
+                      {project.timeline && (
+                        <div className="flex items-center gap-3">
+                          <Clock className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <div className="font-medium">Timeline</div>
+                            <div className="text-sm text-muted-foreground">{project.timeline}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {project.locationPref && (
+                        <div className="flex items-center gap-3">
+                          <MapPin className="h-5 w-5 text-red-600" />
+                          <div>
+                            <div className="font-medium">Location</div>
+                            <div className="text-sm text-muted-foreground capitalize">
+                              {project.locationPref}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+
+                    {/* Required Skills */}
+                    {project.skills.length > 0 && (
+                      <div>
+                        <div className="font-medium mb-2">Required Skills</div>
+                        <div className="flex flex-wrap gap-2">
+                          {project.skills.map((skill) => (
+                            <Badge key={skill.id} variant="secondary">
+                              {skill.label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
-              {/* Application Tab - Only for developers */}
-              {userRole === 'developer' && !isOwner && (
+              {/* Application Tab - Now for both developers AND companies */}
+              {canApply && (
                 <TabsContent value="apply" className="space-y-6 mt-6">
                   {project.status === 'open' ? (
                     <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {hasApplied ? 'Application Submitted' : 'Apply for This Project'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {hasApplied ? (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="text-green-800">
-                        ✅ Your application has been submitted successfully! The company will review it and get back to you soon.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="application-message">
-                          Why are you the right fit for this project?
-                        </Label>
-                        <Textarea
-                          id="application-message"
-                          placeholder="Tell the company about your relevant experience, approach to this project, and why you're interested..."
-                          value={applicationMessage}
-                          onChange={(e) => setApplicationMessage(e.target.value)}
-                          className="min-h-[100px] mt-2"
-                        />
-                      </div>
-                      <Button 
-                        onClick={handleApply}
-                        disabled={!applicationMessage.trim() || isApplying}
-                        className="flex items-center gap-2"
-                      >
-                        <Send className="h-4 w-4" />
-                        {isApplying ? 'Submitting...' : 'Submit Application'}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
+                      <CardHeader>
+                        <CardTitle>
+                          {hasApplied ? 'Application Submitted' : 'Apply for This Project'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {hasApplied ? (
+                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-green-800">
+                              ✅ Your application has been submitted successfully! The project seeker will review it and get back to you soon.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="application-message">
+                                Why are you the right fit for this project?
+                              </Label>
+                              <Textarea
+                                id="application-message"
+                                placeholder={userRole === 'developer' 
+                                  ? "Tell them about your relevant experience, approach to this project, and why you're interested..."
+                                  : "Tell them about your team's experience, your company's approach to projects like this, and why you're the right choice..."
+                                }
+                                value={applicationMessage}
+                                onChange={(e) => setApplicationMessage(e.target.value)}
+                                className="min-h-[100px] mt-2"
+                              />
+                            </div>
+                            <Button 
+                              onClick={handleApply}
+                              disabled={!applicationMessage.trim() || isApplying}
+                              className="flex items-center gap-2"
+                            >
+                              <Send className="h-4 w-4" />
+                              {isApplying ? 'Submitting...' : 'Submit Application'}
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
                     </Card>
                   ) : (
                     <Card>
@@ -290,7 +347,22 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
               {/* Smart Match Tab - Only for project owners */}
               {isOwner && (
                 <TabsContent value="smart-match" className="mt-6">
-                  <SmartMatchResults projectId={project.id} />
+                  <SmartMatchDisplay 
+                    projectId={project.id}
+                    context="project-overview"
+                    projectSummary={{
+                      title: project.title,
+                      description: project.description,
+                      budget: project.budgetMin || project.budgetMax ? {
+                        min: project.budgetMin ? parseFloat(project.budgetMin) : undefined,
+                        max: project.budgetMax ? parseFloat(project.budgetMax) : undefined,
+                        currency: project.currency
+                      } : undefined,
+                      timeline: project.timeline || undefined
+                    }}
+                    onContactDeveloper={(id) => console.log('Contact developer:', id)}
+                    onContactCompany={(id) => console.log('Contact company:', id)}
+                  />
                 </TabsContent>
               )}
             </Tabs>
@@ -298,60 +370,40 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Company Info */}
+            {/* Seeker Info - UPDATED from company info */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  About the Company
+                  <User className="h-5 w-5" />
+                  About the Project Seeker
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={project.company.avatarUrl || undefined} />
+                    <AvatarImage src={project.seeker.avatarUrl || undefined} />
                     <AvatarFallback>
-                      {project.company.companyName?.charAt(0) || 
-                       project.company.displayName?.charAt(0) || 'C'}
+                      {project.seeker.organizationName?.charAt(0) || 
+                       project.seeker.displayName?.charAt(0) || 'S'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-semibold">
-                      {project.company.companyName || project.company.displayName}
+                      {project.seeker.organizationName || project.seeker.displayName}
                     </div>
-                    {project.company.industry && (
+                    {project.seeker.industry && (
                       <div className="text-sm text-muted-foreground">
-                        {project.company.industry}
+                        {project.seeker.industry}
                       </div>
                     )}
                   </div>
                 </div>
 
-                {project.company.about && (
-                  <p className="text-sm text-muted-foreground">
-                    {project.company.about}
-                  </p>
-                )}
-
                 <div className="space-y-2 text-sm">
-                  {project.company.size && (
+                  {project.seeker.companySize && (
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      <span className="capitalize">{project.company.size}</span>
-                    </div>
-                  )}
-                  {project.company.websiteUrl && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      <a 
-                        href={project.company.websiteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline flex items-center gap-1"
-                      >
-                        Visit Website
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <span className="capitalize">{project.seeker.companySize}</span>
                     </div>
                   )}
                 </div>
@@ -378,6 +430,12 @@ export function ProjectDetail({ project, user, userRole, userId, isOwner }: Proj
                   <span className="text-muted-foreground">Skills Required</span>
                   <span>{project.skills.length}</span>
                 </div>
+                {project.complexity && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Complexity</span>
+                    <span className="capitalize">{project.complexity}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

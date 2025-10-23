@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import { 
   Select, 
@@ -19,8 +20,11 @@ import {
   MapPin, 
   Clock, 
   DollarSign, 
+  User,
+  Filter,
+  Sparkles,
   Building2,
-  Filter
+  Code
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -30,7 +34,7 @@ interface ProjectBoardProps {
     email?: string | null
     image?: string | null
   }
-  userRole: 'developer' | 'company' | 'admin'
+  userRole: 'developer' | 'company' | 'admin' | 'seeker' // Added seeker
   userId: string
 }
 
@@ -44,11 +48,16 @@ interface Project {
   timeline: string | null
   locationPref: string | null
   status: string
+  // NEW: Claude analysis fields
+  complexity: 'simple' | 'moderate' | 'complex' | 'enterprise' | null
+  recommendedFor: 'freelancer' | 'company' | 'either' | null
   createdAt: string
-  company: {
+  // UPDATED: Now references seeker instead of company
+  seeker: {
     id: string
     displayName: string | null
     avatarUrl: string | null
+    organizationName?: string | null
   }
   skills: Array<{
     id: number
@@ -61,7 +70,9 @@ const FILTER_OPTIONS = [
   { value: 'all', label: 'All Projects' },
   { value: 'remote', label: 'Remote Only' },
   { value: 'recent', label: 'Posted Recently' },
-  { value: 'budget-high', label: 'High Budget' }
+  { value: 'budget-high', label: 'High Budget' },
+  { value: 'simple', label: 'Simple Projects' },
+  { value: 'complex', label: 'Complex Projects' }
 ]
 
 export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
@@ -76,7 +87,7 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
 
   const loadProjects = async () => {
     try {
-      const response = await fetch('/api/projects')
+      const response = await fetch('/api/projects/browse') // Updated endpoint
       if (response.ok) {
         const data = await response.json()
         setProjects(data.projects)
@@ -91,7 +102,8 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.company.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.seeker.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.seeker.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.skills.some(skill => skill.label.toLowerCase().includes(searchTerm.toLowerCase()))
 
     if (!matchesSearch) return false
@@ -105,6 +117,10 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
         return new Date(project.createdAt) > dayAgo
       case 'budget-high':
         return project.budgetMin && parseFloat(project.budgetMin) > 10000
+      case 'simple':
+        return project.complexity === 'simple' || project.complexity === 'moderate'
+      case 'complex':
+        return project.complexity === 'complex' || project.complexity === 'enterprise'
       default:
         return true
     }
@@ -121,11 +137,66 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
     const now = new Date()
     const posted = new Date(date)
     const diffInHours = Math.floor((now.getTime() - posted.getTime()) / (1000 * 60 * 60))
-    
+
     if (diffInHours < 1) return 'Just posted'
     if (diffInHours < 24) return `${diffInHours}h ago`
     const diffInDays = Math.floor(diffInHours / 24)
     return `${diffInDays}d ago`
+  }
+
+  const getComplexityBadge = (complexity: string | null) => {
+    if (!complexity) return null
+    
+    const colors = {
+      simple: 'bg-green-100 text-green-700 border-green-300',
+      moderate: 'bg-blue-100 text-blue-700 border-blue-300',
+      complex: 'bg-orange-100 text-orange-700 border-orange-300',
+      enterprise: 'bg-purple-100 text-purple-700 border-purple-300'
+    }
+
+    return (
+      <Badge variant="outline" className={`text-xs ${colors[complexity as keyof typeof colors]}`}>
+        {complexity}
+      </Badge>
+    )
+  }
+
+  const getRecommendedForIcon = (recommendedFor: string | null) => {
+    switch (recommendedFor) {
+      case 'freelancer':
+        return <Code className="h-3 w-3" />
+      case 'company':
+        return <Building2 className="h-3 w-3" />
+      default:
+        return null
+    }
+  }
+
+  // UPDATED: Role-specific content
+  const getPageTitle = () => {
+    switch (userRole) {
+      case 'developer':
+        return 'Available Projects'
+      case 'company':
+        return 'Project Opportunities'
+      case 'seeker':
+        return 'All Projects'
+      default:
+        return 'All Projects'
+    }
+  }
+
+  const getPageDescription = () => {
+    switch (userRole) {
+      case 'developer':
+        return 'Discover exciting freelance opportunities from project seekers'
+      case 'company':
+        return 'Find projects that match your team\'s expertise'
+      case 'seeker':
+        return 'Browse all projects on the platform'
+      default:
+        return 'Browse all projects on the platform'
+    }
   }
 
   return (
@@ -136,17 +207,11 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">
-                {userRole === 'developer' ? 'Available Projects' : 'All Projects'}
-              </h1>
-              <p className="text-muted-foreground">
-                {userRole === 'developer' 
-                  ? 'Discover exciting opportunities from top companies'
-                  : 'Browse all projects on the platform'
-                }
-              </p>
+              <h1 className="text-3xl font-bold">{getPageTitle()}</h1>
+              <p className="text-muted-foreground">{getPageDescription()}</p>
             </div>
-            {userRole === 'company' && (
+            {/* UPDATED: Only seekers can post projects */}
+            {userRole === 'seeker' && (
               <Button asChild>
                 <Link href="/projects/new" className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
@@ -162,7 +227,7 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search projects, companies, or skills..."
+              placeholder="Search projects, seekers, or skills..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -214,19 +279,37 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
                 <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
                   <Link href={`/projects/${project.id}`}>
                     <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg line-clamp-2">
+                      <div className="flex items-start justify-between mb-2">
+                        <CardTitle className="text-lg line-clamp-2 flex-1">
                           {project.title}
                         </CardTitle>
-                        <Badge variant="secondary" className="text-xs">
-                          {formatTimeAgo(project.createdAt)}
-                        </Badge>
+                        <div className="flex flex-col gap-1 ml-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {formatTimeAgo(project.createdAt)}
+                          </Badge>
+                          {project.complexity && getComplexityBadge(project.complexity)}
+                        </div>
                       </div>
+                      
+                      {/* UPDATED: Show seeker info with avatar */}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Building2 className="h-4 w-4" />
-                        {project.company.displayName || 'Company'}
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={project.seeker.avatarUrl || undefined} />
+                          <AvatarFallback>
+                            <User className="h-3 w-3" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">
+                          {project.seeker.organizationName || project.seeker.displayName || 'Project Seeker'}
+                        </span>
+                        {project.recommendedFor && (
+                          <div className="ml-auto flex items-center gap-1" title={`Recommended for ${project.recommendedFor}`}>
+                            {getRecommendedForIcon(project.recommendedFor)}
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
+                    
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground line-clamp-3">
                         {project.description}
@@ -235,7 +318,9 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
                       {/* Budget */}
                       <div className="flex items-center gap-2 text-sm">
                         <DollarSign className="h-4 w-4 text-green-600" />
-                        <span>{formatBudget(project.budgetMin, project.budgetMax, project.currency)}</span>
+                        <span className="truncate">
+                          {formatBudget(project.budgetMin, project.budgetMax, project.currency)}
+                        </span>
                       </div>
 
                       {/* Timeline and Location */}
@@ -269,6 +354,14 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
                           )}
                         </div>
                       )}
+
+                      {/* AI Analysis Indicator */}
+                      {(project.complexity || project.recommendedFor) && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground pt-2 border-t">
+                          <Sparkles className="h-3 w-3" />
+                          <span>AI-analyzed project</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Link>
                 </Card>
@@ -283,7 +376,7 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
                     : 'No projects available at the moment'
                   }
                 </div>
-                {userRole === 'company' && (
+                {userRole === 'seeker' && (
                   <Button asChild>
                     <Link href="/projects/new">Post the First Project</Link>
                   </Button>

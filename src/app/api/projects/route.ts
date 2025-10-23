@@ -2,15 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
-import { projects, projectSkills, skills, profiles } from '@/lib/db/schema'
+import { 
+  projects, 
+  profiles,
+  projectSkills,
+  skills as skillsTable
+} from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+
+interface CreateProjectRequest {
+  title: string
+  description: string
+  budgetMin?: number | null
+  budgetMax?: number | null
+  currency: string
+  timeline?: string | null
+  locationPref?: string | null
+  requiredSkills: string[]
+  // Claude analysis fields
+  complexity?: 'simple' | 'moderate' | 'complex' | 'enterprise' | null
+  estimatedTimeline?: string | null
+  recommendedFor?: 'freelancer' | 'company' | 'either' | null
+}
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
     }
 
     // Verify user is a seeker
@@ -19,10 +42,21 @@ export async function POST(request: NextRequest) {
       .where(eq(profiles.id, session.user.id))
       .limit(1)
 
-    if (!userProfile.length || userProfile[0].role !== 'seeker') {
-      return NextResponse.json({ error: 'Only seekers can post projects' }, { status: 403 })
+    if (!userProfile.length) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      )
     }
 
+    if (userProfile[0].role !== 'seeker') {
+      return NextResponse.json(
+        { error: 'Only seekers can post projects' },
+        { status: 403 }
+      )
+    }
+
+    const body: CreateProjectRequest = await request.json()
     const {
       title,
       description,
@@ -31,122 +65,104 @@ export async function POST(request: NextRequest) {
       currency,
       timeline,
       locationPref,
-      requiredSkills
-    } = await request.json()
+      requiredSkills,
+      complexity,
+      estimatedTimeline,
+      recommendedFor
+    } = body
 
-    // Validate required fields
+    // Basic validation
     if (!title?.trim() || !description?.trim()) {
-      return NextResponse.json({ error: 'Title and description are required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Title and description are required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate budget
+    if (budgetMin !== null && budgetMax !== null && budgetMin && budgetMax && budgetMin > budgetMax) {
+      return NextResponse.json(
+        { error: 'Minimum budget cannot exceed maximum budget' },
+        { status: 400 }
+      )
     }
 
     // Create the project
-    const [project] = await db.insert(projects).values({
-      seekerId: session.user.id,
-      title: title.trim(),
-      description: description.trim(),
-      budgetMin: budgetMin ? budgetMin.toString() : null,
-      budgetMax: budgetMax ? budgetMax.toString() : null,
-      currency: currency || 'USD',
-      timeline: timeline || null,
-      locationPref: locationPref || null,
-      status: 'open',
-    }).returning()
+    const newProject = await db.insert(projects)
+      .values({
+        seekerId: session.user.id, // UPDATED: seekerId instead of companyId
+        title: title.trim(),
+        description: description.trim(),
+        budgetMin: budgetMin || null,
+        budgetMax: budgetMax || null,
+        currency: currency || 'USD',
+        timeline: timeline || null,
+        locationPref: locationPref || null,
+        complexity: complexity || null,
+        estimatedTimeline: estimatedTimeline || null,
+        recommendedFor: recommendedFor || null,
+        status: 'open',
+      })
+      .returning()
+
+    if (!newProject.length) {
+      throw new Error('Failed to create project')
+    }
+
+    const projectId = newProject[0].id
 
     // Handle required skills
     if (requiredSkills && Array.isArray(requiredSkills) && requiredSkills.length > 0) {
-      for (const skillName of requiredSkills) {
-        if (typeof skillName !== 'string' || !skillName.trim()) continue
+      for (const skillLabel of requiredSkills) {
+        try {
+          // Find or create skill
+          let existingSkill = await db.select()
+            .from(skillsTable)
+            .where(eq(skillsTable.label, skillLabel.trim()))
+            .limit(1)
 
-        // Find or create skill
-        let skill = await db.select()
-          .from(skills)
-          .where(eq(skills.label, skillName.trim()))
-          .limit(1)
+          let skillId: number
 
-        if (!skill.length) {
-          // Create new skill if it doesn't exist
-          const slug = skillName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-')
-          skill = await db.insert(skills).values({
-            slug,
-            label: skillName.trim(),
-          }).returning()
-        }
+          if (existingSkill.length > 0) {
+            skillId = existingSkill[0].id
+          } else {
+            // Create new skill
+            const newSkill = await db.insert(skillsTable)
+              .values({
+                label: skillLabel.trim(),
+                slug: skillLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, '-')
+              })
+              .returning({ id: skillsTable.id })
+            
+            skillId = newSkill[0].id
+          }
 
-        // Link skill to project
-        if (skill.length > 0) {
-          await db.insert(projectSkills).values({
-            projectId: project.id,
-            skillId: skill[0].id,
-          }).onConflictDoNothing()
+          // Add project skill relationship
+          await db.insert(projectSkills)
+            .values({
+              projectId,
+              skillId
+            })
+        } catch (skillError) {
+          console.error(`Error processing skill "${skillLabel}":`, skillError)
+          // Continue with other skills if one fails
         }
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      id: project.id,
-      project: {
-        ...project,
-        requiredSkills
-      }
-    })
-  } catch (error) {
-    console.error('Error creating project:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const offset = parseInt(searchParams.get('offset') || '0')
-    const status = searchParams.get('status') || 'open'
-
-    // Get projects with seeker information
-    const projectList = await db.select({
-      project: projects,
-      seeker: profiles,
-    })
-      .from(projects)
-      .innerJoin(profiles, eq(projects.seekerId, profiles.id))
-      .where(eq(projects.status, status as any))
-      .orderBy(projects.createdAt)
-      .limit(limit)
-      .offset(offset)
-
-    // Get skills for each project
-    const projectsWithSkills = await Promise.all(
-      projectList.map(async ({ project, seeker }) => {
-        const projectSkillsData = await db.select({
-          skill: skills
-        })
-          .from(projectSkills)
-          .innerJoin(skills, eq(projectSkills.skillId, skills.id))
-          .where(eq(projectSkills.projectId, project.id))
-
-        return {
-          ...project,
-          seeker: {
-            id: seeker.id,
-            displayName: seeker.displayName,
-            avatarUrl: seeker.avatarUrl,
-          },
-          skills: projectSkillsData.map(ps => ps.skill)
-        }
-      })
+    return NextResponse.json(
+      { 
+        ...newProject[0],
+        createdAt: newProject[0].createdAt.toISOString()
+      },
+      { status: 201 }
     )
 
-    return NextResponse.json({
-      projects: projectsWithSkills,
-      pagination: {
-        limit,
-        offset,
-        hasMore: projectsWithSkills.length === limit
-      }
-    })
   } catch (error) {
-    console.error('Error fetching projects:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error creating project:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

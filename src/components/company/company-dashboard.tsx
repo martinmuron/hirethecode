@@ -467,7 +467,7 @@ export function CompanyDashboard({
                       🎯 Use Smart Matching
                     </div>
                     <div className="text-xs text-green-700 mt-1">
-                      Try our AI-powered developer matching for better hiring success
+                      Try our AI-powered developer matching for better matching with projects in our database
                     </div>
                   </div>
 

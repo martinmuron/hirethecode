@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
+import { SmartMatchDisplay } from '@/components/projects/smart-match-display'
 import { 
   Select, 
   SelectContent, 
@@ -105,6 +106,7 @@ export function SeekerProjectForm({ user, seekerId }: SeekerProjectFormProps) {
   const [locationPref, setLocationPref] = useState('')
   const [requiredSkills, setRequiredSkills] = useState<string[]>([])
   const [newSkill, setNewSkill] = useState('')
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
 
   const analyzeWithClaude = async () => {
     if (!projectDescription.trim()) return
@@ -149,6 +151,42 @@ export function SeekerProjectForm({ user, seekerId }: SeekerProjectFormProps) {
   const handleBasicSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     await analyzeWithClaude()
+  }
+
+  const handleCreateProjectAndShowMatches = async () => {
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: claudeAnalysis?.projectTitle || 'My Project',
+          description: projectDescription.trim(),
+          budgetMin: claudeAnalysis?.suggestedBudget?.min || null,
+          budgetMax: claudeAnalysis?.suggestedBudget?.max || null,
+          currency: claudeAnalysis?.suggestedBudget?.currency || 'USD',
+          timeline: claudeAnalysis?.estimatedTimeline || null,
+          locationPref: null,
+          requiredSkills: claudeAnalysis?.requiredSkills || [],
+          // Include Claude analysis metadata
+          complexity: claudeAnalysis?.complexity || null,
+          estimatedTimeline: claudeAnalysis?.estimatedTimeline || null,
+          recommendedFor: claudeAnalysis?.recommendedFor || null,
+        }),
+      })
+
+      if (response.ok) {
+        const project = await response.json()
+        setCreatedProjectId(project.id) // This will trigger showing SmartMatchDisplay
+      } else {
+        console.error('Failed to create project')
+      }
+    } catch (error) {
+      console.error('Error creating project:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleAdvancedSubmit = async (e: React.FormEvent) => {
@@ -226,113 +264,127 @@ export function SeekerProjectForm({ user, seekerId }: SeekerProjectFormProps) {
 
           {/* BASIC TAB */}
           <TabsContent value="basic" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wand2 className="h-5 w-5" />
-                  Describe Your Project
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <form onSubmit={handleBasicSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="projectDescription">Project Description</Label>
-                    <Textarea
-                      id="projectDescription"
-                      value={projectDescription}
-                      onChange={(e) => setProjectDescription(e.target.value)}
-                      placeholder="Describe your project in a few sentences... For example: 'I need a mobile app for food delivery with user accounts, restaurant listings, and payment processing. Users should be able to browse menus, place orders, and track delivery in real-time.'"
-                      className="min-h-[120px]"
-                      required
-                    />
-                  </div>
-
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-semibold mb-2 text-blue-800">✨ How AI Analysis Works</h4>
-                    <div className="space-y-1 text-sm text-blue-700">
-                      <p>• Identifies required technical skills and technologies</p>
-                      <p>• Estimates project complexity and timeline</p>
-                      <p>• Suggests whether you need a freelancer or development team</p>
-                      <p>• Provides instant matches with qualified developers</p>
-                    </div>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    disabled={!projectDescription.trim() || isAnalyzing}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                        Analyzing Project...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Analyze & Find Matches
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Claude Analysis Results */}
-            {claudeAnalysis && (
-              <Card className="border-green-200 bg-green-50">
-                <CardHeader>
-                  <CardTitle className="text-green-800 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5" />
-                    AI Analysis Complete!
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-semibold text-green-800">Required Skills</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {claudeAnalysis.requiredSkills.map(skill => (
-                          <Badge key={skill} variant="secondary">{skill}</Badge>
-                        ))}
+            {!createdProjectId ? (
+              <>
+                {/* Project Description Form */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wand2 className="h-5 w-5" />
+                      Describe Your Project
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <form onSubmit={handleBasicSubmit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="projectDescription">Project Description</Label>
+                        <Textarea
+                          id="projectDescription"
+                          value={projectDescription}
+                          onChange={(e) => setProjectDescription(e.target.value)}
+                          placeholder="Describe your project in a few sentences... For example: 'I need a mobile app for food delivery with user accounts, restaurant listings, and payment processing. Users should be able to browse menus, place orders, and track delivery in real-time.'"
+                          className="min-h-[120px]"
+                          required
+                        />
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-green-800">Complexity</Label>
-                      <p className="text-sm mt-1 capitalize">{claudeAnalysis.complexity}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-green-800">Estimated Timeline</Label>
-                      <p className="text-sm mt-1">{claudeAnalysis.estimatedTimeline}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-green-800">Recommended For</Label>
-                      <p className="text-sm mt-1 capitalize">{claudeAnalysis.recommendedFor}</p>
-                    </div>
-                  </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      onClick={() => setActiveTab('advanced')}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Code className="h-4 w-4" />
-                      Customize Details
-                    </Button>
-                    <Button 
-                      onClick={handleAdvancedSubmit}
-                      disabled={isLoading}
-                      className="flex items-center gap-2"
-                    >
-                      <Users className="h-4 w-4" />
-                      {isLoading ? 'Posting...' : 'Post Project & Show Matches'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <h4 className="font-semibold mb-2 text-blue-800">✨ How AI Analysis Works</h4>
+                        <div className="space-y-1 text-sm text-blue-700">
+                          <p>• Identifies required technical skills and technologies</p>
+                          <p>• Estimates project complexity and timeline</p>
+                          <p>• Suggests whether you need a freelancer or development team</p>
+                          <p>• Provides instant matches with qualified developers</p>
+                        </div>
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        disabled={!projectDescription.trim() || isAnalyzing}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {isAnalyzing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Analyzing Project...
+                          </>
+                        ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Analyze & Find Matches
+                            </>
+                          )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Claude Analysis Results */}
+                {claudeAnalysis && (
+                  <Card className="border-green-200 bg-green-50">
+                    <CardHeader>
+                      <CardTitle className="text-green-800 flex items-center gap-2">
+                        <Sparkles className="h-5 w-5" />
+                        AI Analysis Complete!
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-green-800">Required Skills</Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {claudeAnalysis.requiredSkills.map(skill => (
+                              <Badge key={skill} variant="secondary">{skill}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-green-800">Complexity</Label>
+                          <p className="text-sm mt-1 capitalize">{claudeAnalysis.complexity}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-green-800">Estimated Timeline</Label>
+                          <p className="text-sm mt-1">{claudeAnalysis.estimatedTimeline}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-green-800">Recommended For</Label>
+                          <p className="text-sm mt-1 capitalize">{claudeAnalysis.recommendedFor}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button 
+                          onClick={() => setActiveTab('advanced')}
+                          variant="outline"
+                          className="flex items-center gap-2"
+                        >
+                          <Code className="h-4 w-4" />
+                          Customize Details
+                        </Button>
+                        <Button 
+                          onClick={handleCreateProjectAndShowMatches}
+                          disabled={isLoading}
+                          className="flex items-center gap-2"
+                        >
+                          <Users className="h-4 w-4" />
+                          {isLoading ? 'Creating Project...' : 'Post Project & Show Matches'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+                /* Show Smart Matches after project creation */
+                <SmartMatchDisplay
+                  projectId={createdProjectId}
+                  context="post-analysis"
+                  claudeAnalysis={claudeAnalysis}
+                  onContactDeveloper={(id) => console.log('Contact developer:', id)}
+                  onContactCompany={(id) => console.log('Contact company:', id)}
+                />
+              )}
           </TabsContent>
 
           {/* ADVANCED TAB */}
