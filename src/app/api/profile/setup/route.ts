@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const { userId, role, displayName } = await request.json()
 
     // Validate input
-    if (!role || !displayName || !['developer', 'company'].includes(role)) {
+    if (!role || !displayName || !['developer', 'company', 'seeker'].includes(role)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send welcome email for developers
+    console.log('profile -> setup -> inserted user & profile')
+
     if (role === 'developer') {
       try {
         await EmailService.sendWelcomeDeveloperEmail(
@@ -82,9 +83,25 @@ export async function POST(request: NextRequest) {
       } catch(emailError) {
         console.error('Failed to send welcome email to company:', emailError)
       }
+    } else if(role === 'seeker') {
+      console.log('SEND EMAIL TO SEEKER')
+      try {
+        await EmailService.sendWelcomeSeekerEmail(
+          session.user.email,
+          displayName,
+          userId
+        )
+      } catch(err) {
+        console.error('Failed to send welcome email to seeker, vole:', err)
+      }
     }
 
-    return NextResponse.json({ success: true })
+    console.log('profile -> setup -> got through the email sending hovno')
+
+    return NextResponse.json({ 
+      success: true,
+      ok: true
+    })
   } catch (error) {
     console.error('Error creating profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

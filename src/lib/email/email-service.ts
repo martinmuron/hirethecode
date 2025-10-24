@@ -3,6 +3,7 @@ import { render } from '@react-email/render'
 import { ApplicationStatusEmail } from './templates/application-status'
 import { NewMessageEmail } from './templates/new-message'
 import { WelcomeDeveloperEmail } from './templates/welcome-developer'
+import { WelcomeSeekerEmail } from './templates/welcome-seeker'
 import { WelcomeCompanyEmail} from './templates/welcome-company'
 
 export class EmailService {
@@ -86,6 +87,40 @@ export class EmailService {
       return true
     } catch (error) {
       console.error('Error sending new message email:', error)
+      return false
+    }
+  }
+
+  /**
+   * Send welcome email to new seeker
+   */
+  static async sendWelcomeDeveloperEmail(
+    to: string,
+    seekerName: string,
+    userId: string
+  ) {
+    try {
+      const profileUrl = `${EMAIL_CONFIG.baseUrl}/profile`
+      
+      const emailHtml = await render(
+        WelcomeSeekerEmail({
+          seekerName,
+          profileUrl,
+        })
+      )
+
+      await resend.emails.send({
+        from: EMAIL_CONFIG.from,
+        to,
+        subject: `🚀 Welcome to Hire the Code, ${seekerName}!`,
+        html: emailHtml,
+        replyTo: EMAIL_CONFIG.replyTo,
+      })
+
+      console.log(`Welcome email sent to SEEKER ${to}`)
+      return true
+    } catch (error) {
+      console.error('Error sending welcome email to seeker:', error)
       return false
     }
   }
