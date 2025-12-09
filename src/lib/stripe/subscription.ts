@@ -1,23 +1,24 @@
 import { stripe, STRIPE_CONFIG, StripePlan, StripeBillingInterval } from './config'
-import { db } from '@/lib/db'
-import { subscriptions, profiles, users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '@convex/_generated/api'
+import { Id } from '@convex/_generated/dataModel'
 import { EmailService } from '@/lib/email/email-service'
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export class SubscriptionService {
   /**
    * Create Stripe customer if doesn't exist
    */
-  static async getOrCreateCustomer(userId: string, email: string, name?: string) {
+  static async getOrCreateCustomer(profileId: string, email: string, name?: string) {
     try {
       // Check if user already has a subscription record with customer ID
-      const existingSubscription = await db.select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId))
-        .limit(1)
+      const existingSubscription = await convex.query(api.subscriptions.getByProfileId, {
+        profileId: profileId as Id<'profiles'>
+      })
 
-      if (existingSubscription.length > 0) {
-        return existingSubscription[0].stripeCustomerId
+      if (existingSubscription) {
+        return existingSubscription.stripeCustomerId
       }
 
       // Create new Stripe customer
@@ -25,7 +26,7 @@ export class SubscriptionService {
         email,
         name: name || undefined,
         metadata: {
-          userId,
+          profileId,
         },
       })
 
@@ -40,16 +41,16 @@ export class SubscriptionService {
    * Create checkout session for subscription
    */
   static async createCheckoutSession(
-    userId: string,
+    profileId: string,
     email: string,
     plan: StripePlan,
     billingInterval: StripeBillingInterval,
     name?: string
   ) {
     try {
-      const customerId = await this.getOrCreateCustomer(userId, email, name)
-      
-      const priceId = billingInterval === 'monthly' 
+      const customerId = await this.getOrCreateCustomer(profileId, email, name)
+
+      const priceId = billingInterval === 'monthly'
         ? STRIPE_CONFIG.plans[plan].monthlyPriceId
         : STRIPE_CONFIG.plans[plan].yearlyPriceId
 
@@ -66,13 +67,13 @@ export class SubscriptionService {
         success_url: STRIPE_CONFIG.successUrl + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url: STRIPE_CONFIG.cancelUrl,
         metadata: {
-          userId,
+          profileId,
           plan,
           billingInterval,
         },
         subscription_data: {
           metadata: {
-            userId,
+            profileId,
             plan,
             billingInterval,
           },
@@ -107,24 +108,21 @@ export class SubscriptionService {
   /**
    * Get subscription status
    */
-  static async getSubscriptionStatus(userId: string) {
+  static async getSubscriptionStatus(profileId: string) {
     try {
-      const subscription = await db.select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId))
-        .limit(1)
+      const subscription = await convex.query(api.subscriptions.getByProfileId, {
+        profileId: profileId as Id<'profiles'>
+      })
 
-      if (!subscription.length) {
+      if (!subscription) {
         return null
       }
 
-      const sub = subscription[0]
-      
       // Get latest subscription data from Stripe
-      const stripeSubscription = await stripe.subscriptions.retrieve(sub.id)
+      const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId)
 
       return {
-        ...sub,
+        ...subscription,
         stripeData: stripeSubscription,
         isActive: stripeSubscription.status === 'active',
         isCanceling: stripeSubscription.cancel_at_period_end,
@@ -138,21 +136,18 @@ export class SubscriptionService {
   /**
    * Cancel subscription
    */
-  static async cancelSubscription(userId: string) {
+  static async cancelSubscription(profileId: string) {
     try {
-      const subscription = await db.select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId))
-        .limit(1)
+      const subscription = await convex.query(api.subscriptions.getByProfileId, {
+        profileId: profileId as Id<'profiles'>
+      })
 
-      if (!subscription.length) {
+      if (!subscription) {
         throw new Error('Subscription not found')
       }
 
-      const sub = subscription[0]
-
       // Cancel at period end (don't cancel immediately)
-      await stripe.subscriptions.update(sub.id, {
+      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: true,
       })
 
@@ -166,21 +161,18 @@ export class SubscriptionService {
   /**
    * Reactivate canceled subscription
    */
-  static async reactivateSubscription(userId: string) {
+  static async reactivateSubscription(profileId: string) {
     try {
-      const subscription = await db.select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId))
-        .limit(1)
+      const subscription = await convex.query(api.subscriptions.getByProfileId, {
+        profileId: profileId as Id<'profiles'>
+      })
 
-      if (!subscription.length) {
+      if (!subscription) {
         throw new Error('Subscription not found')
       }
 
-      const sub = subscription[0]
-
       // Remove cancellation
-      await stripe.subscriptions.update(sub.id, {
+      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: false,
       })
 
@@ -197,58 +189,44 @@ export class SubscriptionService {
   static async handleSubscriptionCreated(subscription: any) {
     try {
       const { customer, id, status, current_period_end, metadata } = subscription
-      const { userId, plan, billingInterval } = metadata
+      const { profileId, plan, billingInterval } = metadata
 
-      if (!userId) {
-        console.error('No userId in subscription metadata')
+      if (!profileId) {
+        console.error('No profileId in subscription metadata')
         return
       }
 
-      // Save subscription to database
-      await db.insert(subscriptions).values({
-        id,
-        userId,
+      // Save subscription to Convex
+      await convex.mutation(api.subscriptions.create, {
+        profileId: profileId as Id<'profiles'>,
         stripeCustomerId: customer,
+        stripeSubscriptionId: id,
         productTier: plan,
         status,
-        currentPeriodEnd: new Date(current_period_end * 1000),
-      }).onConflictDoUpdate({
-        target: subscriptions.id,
-        set: {
-          status,
-          currentPeriodEnd: new Date(current_period_end * 1000),
-        }
+        currentPeriodEnd: current_period_end * 1000, // Convert to milliseconds
       })
 
       // Send subscription confirmation email
       try {
-        const userInfo = await db.select({
-          email: users.email,
-          name: profiles.displayName,
-          userEmail: users.name
+        // Get user info from Convex
+        const profile = await convex.query(api.profiles.getById, {
+          profileId: profileId as Id<'profiles'>
         })
-          .from(profiles)
-          .innerJoin(users, eq(profiles.id, users.id))
-          .where(eq(profiles.id, userId))
-          .limit(1)
 
-        if (userInfo.length > 0) {
-          const { email, name, userEmail } = userInfo[0]
-          const userName = name || userEmail || 'User'
-          
+        if (profile) {
           const planNames = {
             developer: 'Developer Pro',
             company: 'Company Enterprise'
           }
-          
+
           const planPrices = {
             developer: billingInterval === 'yearly' ? '$990' : '$99',
             company: billingInterval === 'yearly' ? '$4990' : '$499'
           }
 
           await EmailService.sendSubscriptionConfirmationEmail(
-            email,
-            userName,
+            profile.email || '',
+            profile.displayName || 'User',
             planNames[plan as keyof typeof planNames] || 'Premium',
             planPrices[plan as keyof typeof planPrices] || 'N/A',
             billingInterval || 'monthly'
@@ -259,7 +237,7 @@ export class SubscriptionService {
         // Don't fail the subscription creation if email fails
       }
 
-      console.log(`Subscription created for user ${userId}`)
+      console.log(`Subscription created for profile ${profileId}`)
     } catch (error) {
       console.error('Error handling subscription created:', error)
       throw error
@@ -271,14 +249,13 @@ export class SubscriptionService {
    */
   static async handleSubscriptionUpdated(subscription: any) {
     try {
-      const { id, status, current_period_end, cancel_at_period_end } = subscription
+      const { id, status, current_period_end } = subscription
 
-      await db.update(subscriptions)
-        .set({
-          status,
-          currentPeriodEnd: new Date(current_period_end * 1000),
-        })
-        .where(eq(subscriptions.id, id))
+      await convex.mutation(api.subscriptions.update, {
+        stripeSubscriptionId: id,
+        status,
+        currentPeriodEnd: current_period_end * 1000, // Convert to milliseconds
+      })
 
       console.log(`Subscription ${id} updated to status: ${status}`)
     } catch (error) {
@@ -294,8 +271,9 @@ export class SubscriptionService {
     try {
       const { id } = subscription
 
-      await db.delete(subscriptions)
-        .where(eq(subscriptions.id, id))
+      await convex.mutation(api.subscriptions.remove, {
+        stripeSubscriptionId: id
+      })
 
       console.log(`Subscription ${id} deleted`)
     } catch (error) {

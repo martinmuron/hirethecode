@@ -2,29 +2,28 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { useClerk, useUser } from '@clerk/nextjs'
+import { useQuery } from 'convex/react'
+import { api } from '@convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, Settings, LogOut } from 'lucide-react'
+import { User, Settings, LogOut, Bell } from 'lucide-react'
 
-interface DashboardNavProps {
-  user: {
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
-  role: 'developer' | 'company' | 'admin'
-}
-
-export function DashboardNav({ user, role }: DashboardNavProps) {
+export function DashboardNav() {
   const pathname = usePathname()
+  const { signOut } = useClerk()
+  const { user: clerkUser } = useUser()
+  const profile = useQuery(api.profiles.getCurrent)
+  const notificationCount = useQuery(api.notifications.getUnreadCount)
+
+  const role = profile?.role || 'developer'
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
@@ -43,24 +42,24 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
   ]
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <nav className="border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+      <div className="container flex h-16 items-center">
         <div className="mr-4 flex">
           <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-xl">Hire the Code</span>
+            <span className="font-semibold text-xl tracking-tight">Hire the Code</span>
           </Link>
         </div>
 
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="flex items-center space-x-6 text-sm font-medium">
+          <nav className="flex items-center space-x-1 text-sm font-medium">
             {navigation.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`transition-colors hover:text-foreground/80 ${
-                  pathname === item.href 
-                    ? 'text-foreground' 
-                    : 'text-foreground/60'
+                className={`px-4 py-2 rounded-full transition-all duration-200 ${
+                  pathname === item.href
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 {item.name}
@@ -68,52 +67,80 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
             ))}
           </nav>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.image || undefined} alt={user.name || ''} />
-                  <AvatarFallback>
-                    {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1 leading-none">
-                  {user.name && <p className="font-medium">{user.name}</p>}
-                  <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {user.email}
-                  </p>
+          <div className="flex items-center space-x-2">
+            {/* Notifications */}
+            <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
+              <Link href="/notifications">
+                <Bell className="h-5 w-5 text-gray-600" />
+                {notificationCount && notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </span>
+                )}
+              </Link>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+                    <AvatarImage
+                      src={clerkUser?.imageUrl || profile?.avatarUrl || undefined}
+                      alt={clerkUser?.fullName || profile?.displayName || ''}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                      {clerkUser?.firstName?.charAt(0) || profile?.displayName?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 rounded-xl p-2" align="end" forceMount>
+                <div className="flex items-center justify-start gap-3 p-2">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={clerkUser?.imageUrl || profile?.avatarUrl || undefined}
+                      alt={clerkUser?.fullName || ''}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                      {clerkUser?.firstName?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-0.5 leading-none">
+                    <p className="font-medium text-sm">
+                      {clerkUser?.fullName || profile?.displayName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {clerkUser?.primaryEmailAddress?.emailAddress}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile" className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/billing" className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Billing & Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={(event) => {
-                  event.preventDefault()
-                  signOut()
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link href="/billing">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Billing & Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuItem
+                  className="rounded-lg cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    signOut({ redirectUrl: '/' })
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </nav>

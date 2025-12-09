@@ -1,11 +1,13 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+'use client'
+
+import { useUser } from '@clerk/nextjs'
+import { useQuery } from 'convex/react'
+import { api } from '@convex/_generated/api'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { projects, profiles, projectSkills, skills, companyProfiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { Loader2 } from 'lucide-react'
 import { ProjectDetail } from '@/components/projects/project-detail'
-import { notFound } from 'next/navigation'
+import { Id } from '@convex/_generated/dataModel'
+import { use } from 'react'
 
 interface ProjectPageProps {
   params: Promise<{
@@ -13,73 +15,26 @@ interface ProjectPageProps {
   }>
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
-  const { id } = await params
-  const session = await getServerSession(authOptions)
-  
-  if (!session?.user?.email) {
-    redirect('/auth/sign-in')
+export default function ProjectPage({ params }: ProjectPageProps) {
+  const { id } = use(params)
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser()
+  const profile = useQuery(api.profiles.getCurrent)
+
+  if (!clerkLoaded || profile === undefined) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
-  // Get user profile
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.id, session.user.id))
-    .limit(1)
+  if (!clerkUser) {
+    redirect('/sign-in')
+  }
 
-  if (!userProfile.length) {
+  if (!profile) {
     redirect('/profile/setup')
   }
 
-  const profile = userProfile[0]
-
-  // Get project with company details
-  const projectData = await db.select({
-    project: projects,
-    company: profiles,
-    companyProfile: companyProfiles,
-  })
-    .from(projects)
-    .innerJoin(profiles, eq(projects.companyId, profiles.id))
-    .leftJoin(companyProfiles, eq(projects.companyId, companyProfiles.userId))
-    .where(eq(projects.id, id))
-    .limit(1)
-
-  if (!projectData.length) {
-    notFound()
-  }
-
-  const { project, company, companyProfile } = projectData[0]
-
-  // Get project skills
-  const projectSkillsData = await db.select({
-    skill: skills
-  })
-    .from(projectSkills)
-    .innerJoin(skills, eq(projectSkills.skillId, skills.id))
-    .where(eq(projectSkills.projectId, project.id))
-
-  const projectWithDetails = {
-    ...project,
-    createdAt: project.createdAt.toISOString(),
-    company: {
-      ...company,
-      companyName: companyProfile?.companyName || null,
-      about: companyProfile?.about || null,
-      websiteUrl: companyProfile?.websiteUrl || null,
-      industry: companyProfile?.industry || null,
-      size: companyProfile?.size || null,
-    },
-    skills: projectSkillsData.map(ps => ps.skill)
-  }
-
-  return (
-    <ProjectDetail 
-      project={projectWithDetails}
-      user={session.user} 
-      userRole={profile.role}
-      userId={profile.id}
-      isOwner={profile.id === project.companyId}
-    />
-  )
+  return <ProjectDetail projectId={id as Id<'projects'>} />
 }

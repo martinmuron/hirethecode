@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@convex/_generated/api'
+import { Id } from '@convex/_generated/dataModel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,45 +13,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
-import { Plus, X, Save, User as UserIcon } from 'lucide-react'
-import type { Profile, User, DeveloperProfile, Skill } from '@/lib/db/schema'
+import { Plus, X, Save, User as UserIcon, Loader2 } from 'lucide-react'
 
-interface DeveloperProfileEditorProps {
-  profile: Profile
-  user: User
-  developerProfile: DeveloperProfile | null
-  userSkills: Array<{
-    skill: Skill
-    level: string
-  }>
-}
-
-interface SkillWithLevel {
-  id: number
+interface SelectedSkill {
+  id: Id<'skills'>
   slug: string
   label: string
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert'
 }
-
-const COMMON_SKILLS = [
-  { id: 1, slug: 'javascript', label: 'JavaScript' },
-  { id: 2, slug: 'typescript', label: 'TypeScript' },
-  { id: 3, slug: 'react', label: 'React' },
-  { id: 4, slug: 'nextjs', label: 'Next.js' },
-  { id: 5, slug: 'nodejs', label: 'Node.js' },
-  { id: 6, slug: 'python', label: 'Python' },
-  { id: 7, slug: 'java', label: 'Java' },
-  { id: 8, slug: 'csharp', label: 'C#' },
-  { id: 9, slug: 'php', label: 'PHP' },
-  { id: 10, slug: 'golang', label: 'Go' },
-]
 
 const SKILL_LEVELS = [
   { value: 'beginner', label: 'Beginner' },
@@ -63,70 +42,97 @@ const AVAILABILITY_OPTIONS = [
   { value: 'unavailable', label: 'Unavailable' }
 ]
 
-export function DeveloperProfileEditor({ 
-  profile, 
-  user, 
-  developerProfile,
-  userSkills 
-}: DeveloperProfileEditorProps) {
+export function DeveloperProfileEditor() {
   const router = useRouter()
+  const profile = useQuery(api.profiles.getCurrent)
+  const developerData = useQuery(api.developers.getCurrentProfile)
+  const allSkills = useQuery(api.skills.list)
+  const updateProfile = useMutation(api.profiles.update)
+  const updateDeveloperProfile = useMutation(api.developers.updateProfile)
+  const updateSkills = useMutation(api.skills.updateDeveloperSkills)
+
   const [isLoading, setIsLoading] = useState(false)
 
   // Form state
-  const [displayName, setDisplayName] = useState(profile.displayName || '')
-  const [headline, setHeadline] = useState(developerProfile?.headline || '')
-  const [bio, setBio] = useState(developerProfile?.bio || '')
-  const [rate, setRate] = useState(developerProfile?.rate || '')
-  const [availability, setAvailability] = useState<'available' | 'busy' | 'unavailable'>(
-    (developerProfile?.availability as 'available' | 'busy' | 'unavailable') || 'available'
-  )
-  const [portfolioUrl, setPortfolioUrl] = useState(developerProfile?.portfolioUrl || '')
-  const [githubUrl, setGithubUrl] = useState(developerProfile?.githubUrl || '')
-  const [websiteUrl, setWebsiteUrl] = useState(developerProfile?.websiteUrl || '')
-  const [country, setCountry] = useState(developerProfile?.country || '')
-
-  // Skills state
-  const [skills, setSkills] = useState<SkillWithLevel[]>(
-    userSkills.map(us => ({
-      id: us.skill.id,
-      slug: us.skill.slug,
-      label: us.skill.label,
-      level: us.level as any
-    }))
-  )
+  const [displayName, setDisplayName] = useState('')
+  const [headline, setHeadline] = useState('')
+  const [bio, setBio] = useState('')
+  const [rate, setRate] = useState('')
+  const [availability, setAvailability] = useState<'available' | 'busy' | 'unavailable'>('available')
+  const [portfolioUrl, setPortfolioUrl] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [country, setCountry] = useState('')
+  const [skills, setSkills] = useState<SelectedSkill[]>([])
   const [newSkill, setNewSkill] = useState('')
   const [newSkillLevel, setNewSkillLevel] = useState<string>('intermediate')
 
+  // Initialize form with existing data
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.displayName || '')
+    }
+    if (developerData?.developerProfile) {
+      const dp = developerData.developerProfile
+      setHeadline(dp.headline || '')
+      setBio(dp.bio || '')
+      setRate(dp.rate?.toString() || '')
+      setAvailability(dp.availability || 'available')
+      setPortfolioUrl(dp.portfolioUrl || '')
+      setGithubUrl(dp.githubUrl || '')
+      setWebsiteUrl(dp.websiteUrl || '')
+      setCountry(dp.country || '')
+    }
+    if (developerData?.skills) {
+      setSkills(developerData.skills.filter(Boolean).map(s => ({
+        id: s!._id,
+        slug: s!.slug,
+        label: s!.label,
+        level: (s!.level || 'intermediate') as SelectedSkill['level']
+      })))
+    }
+  }, [profile, developerData])
+
+  // Redirect if not a developer
+  useEffect(() => {
+    if (profile && profile.role !== 'developer') {
+      router.push('/dashboard')
+    }
+  }, [profile, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!profile) return
+
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/profile/developer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          displayName,
-          headline,
-          bio,
-          rate: rate ? parseFloat(rate) : null,
-          availability,
-          portfolioUrl: portfolioUrl || null,
-          githubUrl: githubUrl || null,
-          websiteUrl: websiteUrl || null,
-          country: country || null,
-          skills: skills.map(skill => ({
-            skillId: skill.id,
-            level: skill.level
-          }))
-        }),
+      // Update main profile
+      await updateProfile({
+        displayName: displayName.trim() || undefined
       })
 
-      if (response.ok) {
-        router.push('/dashboard')
-      } else {
-        console.error('Failed to update profile')
-      }
+      // Update developer profile
+      await updateDeveloperProfile({
+        headline: headline.trim() || undefined,
+        bio: bio.trim() || undefined,
+        rate: rate ? parseFloat(rate) : undefined,
+        availability,
+        portfolioUrl: portfolioUrl.trim() || undefined,
+        githubUrl: githubUrl.trim() || undefined,
+        websiteUrl: websiteUrl.trim() || undefined,
+        country: country.trim() || undefined
+      })
+
+      // Update skills
+      await updateSkills({
+        skills: skills.map(s => ({
+          skillId: s.id,
+          level: s.level
+        }))
+      })
+
+      router.push('/dashboard')
     } catch (error) {
       console.error('Error updating profile:', error)
     } finally {
@@ -135,95 +141,109 @@ export function DeveloperProfileEditor({
   }
 
   const addSkill = () => {
-    const skillToAdd = COMMON_SKILLS.find(s => 
+    if (!allSkills) return
+
+    const skillToAdd = allSkills.find(s =>
       s.label.toLowerCase() === newSkill.toLowerCase()
     )
-    
-    if (skillToAdd && !skills.find(s => s.id === skillToAdd.id)) {
+
+    if (skillToAdd && !skills.find(s => s.id === skillToAdd._id)) {
       setSkills([...skills, {
-        ...skillToAdd,
-        level: newSkillLevel as any
+        id: skillToAdd._id,
+        slug: skillToAdd.slug,
+        label: skillToAdd.label,
+        level: newSkillLevel as SelectedSkill['level']
       }])
       setNewSkill('')
       setNewSkillLevel('intermediate')
     }
   }
 
-  const removeSkill = (skillId: number) => {
+  const removeSkill = (skillId: Id<'skills'>) => {
     setSkills(skills.filter(s => s.id !== skillId))
   }
 
-  const updateSkillLevel = (skillId: number, level: string) => {
-    setSkills(skills.map(s => 
-      s.id === skillId ? { ...s, level: level as any } : s
+  const updateSkillLevel = (skillId: Id<'skills'>, level: string) => {
+    setSkills(skills.map(s =>
+      s.id === skillId ? { ...s, level: level as SelectedSkill['level'] } : s
     ))
   }
 
+  if (profile === undefined || developerData === undefined || allSkills === undefined) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
-      
+    <div className="min-h-screen bg-[#fafafa]">
+      <DashboardNav />
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Developer Profile</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Developer Profile</h1>
+          <p className="text-gray-500 mt-1">
             Update your profile to attract the right opportunities
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <UserIcon className="h-5 w-5" />
                 Basic Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.image || undefined} />
-                  <AvatarFallback className="text-lg">
-                    {displayName?.charAt(0) || user.name?.charAt(0) || 'D'}
+                <Avatar className="h-20 w-20 ring-2 ring-gray-100">
+                  <AvatarImage src={profile?.avatarUrl || undefined} />
+                  <AvatarFallback className="text-lg bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                    {displayName?.charAt(0) || 'D'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="displayName" className="text-gray-700">Display Name</Label>
                   <Input
                     id="displayName"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your professional name"
+                    className="rounded-xl border-gray-200 mt-1"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="headline">Professional Headline</Label>
+                <Label htmlFor="headline" className="text-gray-700">Professional Headline</Label>
                 <Input
                   id="headline"
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   placeholder="e.g., Full-Stack Developer specializing in React & Node.js"
+                  className="rounded-xl border-gray-200 mt-1"
                 />
               </div>
 
               <div>
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio" className="text-gray-700">Bio</Label>
                 <Textarea
                   id="bio"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell companies about your experience, passion, and what you're looking for..."
-                  className="min-h-[100px]"
+                  className="min-h-[100px] rounded-xl border-gray-200 mt-1"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="rate">Hourly Rate (USD)</Label>
+                  <Label htmlFor="rate" className="text-gray-700">Hourly Rate (USD)</Label>
                   <Input
                     id="rate"
                     type="number"
@@ -232,15 +252,16 @@ export function DeveloperProfileEditor({
                     placeholder="150"
                     min="0"
                     step="0.01"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="availability">Availability</Label>
-                  <Select 
-                    value={availability} 
-                    onValueChange={(value) => setAvailability(value as 'available' | 'busy' | 'unavailable')}
+                  <Label htmlFor="availability" className="text-gray-700">Availability</Label>
+                  <Select
+                    value={availability}
+                    onValueChange={(value) => setAvailability(value as typeof availability)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-gray-200 mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -257,21 +278,21 @@ export function DeveloperProfileEditor({
           </Card>
 
           {/* Skills */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle>Skills & Expertise</CardTitle>
+              <CardTitle className="text-gray-900">Skills & Expertise</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => (
                   <div key={skill.id} className="flex items-center gap-1">
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge variant="secondary" className="flex items-center gap-1 rounded-full pr-1">
                       {skill.label}
-                      <Select 
-                        value={skill.level} 
+                      <Select
+                        value={skill.level}
                         onValueChange={(level) => updateSkillLevel(skill.id, level)}
                       >
-                        <SelectTrigger className="h-6 w-fit border-0 p-0 text-xs">
+                        <SelectTrigger className="h-6 w-fit border-0 p-0 text-xs bg-transparent">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -286,7 +307,7 @@ export function DeveloperProfileEditor({
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full"
                         onClick={() => removeSkill(skill.id)}
                       >
                         <X className="h-3 w-3" />
@@ -307,9 +328,16 @@ export function DeveloperProfileEditor({
                       addSkill()
                     }
                   }}
+                  list="skills-list"
+                  className="rounded-xl border-gray-200"
                 />
+                <datalist id="skills-list">
+                  {allSkills?.map(skill => (
+                    <option key={skill._id} value={skill.label} />
+                  ))}
+                </datalist>
                 <Select value={newSkillLevel} onValueChange={setNewSkillLevel}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 rounded-xl border-gray-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -320,7 +348,7 @@ export function DeveloperProfileEditor({
                     ))}
                   </SelectContent>
                 </Select>
-                <Button type="button" onClick={addSkill}>
+                <Button type="button" onClick={addSkill} className="rounded-full">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -328,52 +356,56 @@ export function DeveloperProfileEditor({
           </Card>
 
           {/* Links & Contact */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle>Links & Location</CardTitle>
+              <CardTitle className="text-gray-900">Links & Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="portfolioUrl">Portfolio URL</Label>
+                  <Label htmlFor="portfolioUrl" className="text-gray-700">Portfolio URL</Label>
                   <Input
                     id="portfolioUrl"
                     type="url"
                     value={portfolioUrl}
                     onChange={(e) => setPortfolioUrl(e.target.value)}
                     placeholder="https://yourportfolio.com"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="githubUrl">GitHub Profile</Label>
+                  <Label htmlFor="githubUrl" className="text-gray-700">GitHub Profile</Label>
                   <Input
                     id="githubUrl"
                     type="url"
                     value={githubUrl}
                     onChange={(e) => setGithubUrl(e.target.value)}
                     placeholder="https://github.com/yourusername"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="websiteUrl">Personal Website</Label>
+                  <Label htmlFor="websiteUrl" className="text-gray-700">Personal Website</Label>
                   <Input
                     id="websiteUrl"
                     type="url"
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                     placeholder="https://yourwebsite.com"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="country">Country</Label>
+                  <Label htmlFor="country" className="text-gray-700">Country</Label>
                   <Input
                     id="country"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     placeholder="United States"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
               </div>
@@ -382,14 +414,19 @@ export function DeveloperProfileEditor({
 
           {/* Submit */}
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex items-center gap-2">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="flex items-center gap-2 rounded-full px-6"
+            >
               <Save className="h-4 w-4" />
               {isLoading ? 'Saving...' : 'Save Profile'}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => router.push('/dashboard')}
+              className="rounded-full"
             >
               Cancel
             </Button>

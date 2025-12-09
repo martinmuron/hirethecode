@@ -1,39 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '@convex/_generated/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
-import { 
-  CreditCard, 
-  Calendar, 
-  Check, 
-  X,
+import {
+  CreditCard,
+  Calendar,
+  Check,
   ExternalLink,
   AlertTriangle,
   Crown,
   Building2,
-  Code
+  Code,
+  Loader2
 } from 'lucide-react'
-import { loadStripe } from '@stripe/stripe-js'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-
-interface BillingDashboardProps {
-  user: {
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
-  userRole: 'developer' | 'company' | 'admin'
-}
 
 interface Subscription {
   id: string
   status: string
   productTier: string
-  currentPeriodEnd: string
+  currentPeriodEnd: string | number
   isActive: boolean
   isCanceling: boolean
 }
@@ -58,7 +48,7 @@ const PLAN_FEATURES = {
   },
   company: {
     name: 'Company Enterprise',
-    price: '$499/month', 
+    price: '$499/month',
     yearlyPrice: '$4990/year',
     icon: Building2,
     color: 'bg-purple-500',
@@ -94,7 +84,8 @@ const PLAN_FEATURES = {
   }
 }
 
-export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
+export function BillingDashboard() {
+  const profile = useQuery(api.profiles.getCurrent)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -107,7 +98,7 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
     try {
       const response = await fetch('/api/stripe/subscription')
       const data = await response.json()
-      
+
       if (data.hasSubscription) {
         setSubscription(data.subscription)
       }
@@ -120,19 +111,19 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
 
   const handleSubscribe = async (billingInterval: 'monthly' | 'yearly') => {
     setActionLoading(true)
-    
+
     try {
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan: userRole,
+          plan: profile?.role || 'developer',
           billingInterval
         })
       })
 
       const { url } = await response.json()
-      
+
       if (url) {
         window.location.href = url
       }
@@ -145,14 +136,14 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
 
   const handleManageBilling = async () => {
     setActionLoading(true)
-    
+
     try {
       const response = await fetch('/api/stripe/create-billing-portal', {
         method: 'POST'
       })
 
       const { url } = await response.json()
-      
+
       if (url) {
         window.location.href = url
       }
@@ -169,13 +160,13 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
     }
 
     setActionLoading(true)
-    
+
     try {
       await fetch('/api/stripe/subscription', {
         method: 'DELETE'
       })
-      
-      await fetchSubscription() // Refresh subscription data
+
+      await fetchSubscription()
     } catch (error) {
       console.error('Error canceling subscription:', error)
     } finally {
@@ -185,13 +176,13 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
 
   const handleReactivateSubscription = async () => {
     setActionLoading(true)
-    
+
     try {
       await fetch('/api/stripe/subscription', {
         method: 'PATCH'
       })
-      
-      await fetchSubscription() // Refresh subscription data
+
+      await fetchSubscription()
     } catch (error) {
       console.error('Error reactivating subscription:', error)
     } finally {
@@ -199,8 +190,9 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
     }
   }
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: string | number) => {
+    const d = typeof date === 'number' ? new Date(date) : new Date(date)
+    return d.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -216,34 +208,43 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
     }
   }
 
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  const userRole = profile.role as 'developer' | 'company' | 'admin'
   const planInfo = PLAN_FEATURES[userRole]
   const PlanIcon = planInfo.icon
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={userRole} />
-      
+    <div className="min-h-screen bg-[#fafafa]">
+      <DashboardNav />
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Billing & Subscription</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Billing & Subscription</h1>
+          <p className="text-gray-500 mt-1">
             Manage your subscription and billing information
           </p>
         </div>
 
         {loading ? (
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center py-8">
-                <div className="text-muted-foreground">Loading subscription information...</div>
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto" />
+                <p className="text-gray-500 mt-2">Loading subscription information...</p>
               </div>
             </CardContent>
           </Card>
         ) : subscription ? (
-          // Has active subscription
           <div className="space-y-6">
             {/* Current Plan */}
-            <Card>
+            <Card className="bg-white border-gray-100 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -251,14 +252,14 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
                       <PlanIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-gray-900">
                         {planInfo.name}
                         <Crown className="h-5 w-5 text-yellow-500" />
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">Current plan</p>
+                      <p className="text-sm text-gray-500">Current plan</p>
                     </div>
                   </div>
-                  <Badge className={getStatusColor(subscription.status)}>
+                  <Badge className={`rounded-full ${getStatusColor(subscription.status)}`}>
                     {subscription.status}
                   </Badge>
                 </div>
@@ -266,19 +267,19 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">
                       Renews on {formatDate(subscription.currentPeriodEnd)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm capitalize">{subscription.productTier} plan</span>
+                    <CreditCard className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600 capitalize">{subscription.productTier} plan</span>
                   </div>
                 </div>
 
                 {subscription.isCanceling && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                     <div className="flex items-center gap-2 text-yellow-800">
                       <AlertTriangle className="h-4 w-4" />
                       <span className="text-sm font-medium">
@@ -289,28 +290,30 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
                 )}
 
                 <div className="flex gap-3">
-                  <Button 
+                  <Button
                     onClick={handleManageBilling}
                     disabled={actionLoading}
-                    className="flex items-center gap-2"
+                    className="rounded-full flex items-center gap-2"
                   >
                     <ExternalLink className="h-4 w-4" />
                     Manage Billing
                   </Button>
-                  
+
                   {subscription.isCanceling ? (
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={handleReactivateSubscription}
                       disabled={actionLoading}
+                      className="rounded-full"
                     >
                       Reactivate Subscription
                     </Button>
                   ) : (
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={handleCancelSubscription}
                       disabled={actionLoading}
+                      className="rounded-full"
                     >
                       Cancel Subscription
                     </Button>
@@ -320,16 +323,16 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
             </Card>
 
             {/* Plan Features */}
-            <Card>
+            <Card className="bg-white border-gray-100 shadow-sm">
               <CardHeader>
-                <CardTitle>Your Plan Includes</CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-900">Your Plan Includes</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {planInfo.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">{feature}</span>
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-gray-600">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -337,17 +340,16 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
             </Card>
           </div>
         ) : (
-          // No subscription
           <div className="space-y-6">
-            <Card>
+            <Card className="bg-white border-gray-100 shadow-sm">
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4">
-                  <div className={`p-4 rounded-full ${planInfo.color} w-16 h-16 flex items-center justify-center`}>
+                  <div className={`p-4 rounded-2xl ${planInfo.color} w-16 h-16 flex items-center justify-center`}>
                     <PlanIcon className="h-8 w-8 text-white" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">{planInfo.name}</CardTitle>
-                <p className="text-muted-foreground">
+                <CardTitle className="text-2xl text-gray-900">{planInfo.name}</CardTitle>
+                <p className="text-gray-500">
                   Get full access to all premium features
                 </p>
               </CardHeader>
@@ -356,31 +358,33 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
                 <div className="text-center space-y-4">
                   <div className="flex justify-center gap-8">
                     <div className="text-center">
-                      <div className="text-3xl font-bold">{planInfo.price}</div>
-                      <div className="text-sm text-muted-foreground">Monthly billing</div>
+                      <div className="text-3xl font-semibold text-gray-900">{planInfo.price}</div>
+                      <div className="text-sm text-gray-500">Monthly billing</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold">{planInfo.yearlyPrice}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-3xl font-semibold text-gray-900">{planInfo.yearlyPrice}</div>
+                      <div className="text-sm text-gray-500">
                         Yearly billing
-                        <Badge variant="secondary" className="ml-2">Save 17%</Badge>
+                        <Badge variant="secondary" className="ml-2 rounded-full">Save 17%</Badge>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex justify-center gap-4">
-                    <Button 
+                    <Button
                       size="lg"
                       onClick={() => handleSubscribe('monthly')}
                       disabled={actionLoading}
+                      className="rounded-full px-8"
                     >
                       Subscribe Monthly
                     </Button>
-                    <Button 
+                    <Button
                       size="lg"
                       variant="outline"
                       onClick={() => handleSubscribe('yearly')}
                       disabled={actionLoading}
+                      className="rounded-full px-8"
                     >
                       Subscribe Yearly
                     </Button>
@@ -389,12 +393,12 @@ export function BillingDashboard({ user, userRole }: BillingDashboardProps) {
 
                 {/* Features */}
                 <div>
-                  <h3 className="font-semibold mb-4">What&apos;s included:</h3>
+                  <h3 className="font-semibold mb-4 text-gray-900">What&apos;s included:</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {planInfo.features.map((feature, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">{feature}</span>
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-gray-600">{feature}</span>
                       </div>
                     ))}
                   </div>

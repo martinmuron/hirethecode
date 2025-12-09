@@ -1,51 +1,48 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+'use client'
+
+import { useUser } from '@clerk/nextjs'
+import { useQuery } from 'convex/react'
+import { api } from '@convex/_generated/api'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import { DeveloperDashboard } from '@/components/dashboard/developer-dashboard'
 import { CompanyDashboard } from '@/components/dashboard/company-dashboard'
-import { SubscriptionRequired } from '@/components/dashboard/subscription-required'
+import { DashboardNav } from '@/components/navigation/dashboard-nav'
+import { Loader2 } from 'lucide-react'
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session?.user?.email) {
-    redirect('/auth/sign-in')
+export default function DashboardPage() {
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser()
+  const profileData = useQuery(api.profiles.getCurrentWithProfile)
+  const subscription = useQuery(api.subscriptions.get)
+
+  // Loading state
+  if (!clerkLoaded || profileData === undefined) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
-  // Get user profile from database
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.id, session.user.id))
-    .limit(1)
+  // Not authenticated
+  if (!clerkUser) {
+    redirect('/sign-in')
+  }
 
-  // If no profile exists, redirect to profile creation
-  if (!userProfile.length) {
+  // No profile - needs setup
+  if (!profileData?.profile) {
     redirect('/profile/setup')
   }
 
-  const profile = userProfile[0]
+  const { profile } = profileData
 
-  // Check subscription status (simplified for now)
-  // TODO: Integrate with Stripe to check actual subscription status
-  const hasActiveSubscription = true // For now, assume everyone has subscription
-
-  if (!hasActiveSubscription) {
-    return <SubscriptionRequired role={profile.role} />
-  }
-
-  // Render appropriate dashboard based on role
-  if (profile.role === 'developer') {
-    return <DeveloperDashboard profile={profile} user={session.user} />
-  } else if (profile.role === 'company') {
-    return <CompanyDashboard profile={profile} user={session.user} />
-  } else if (profile.role === 'admin') {
-    // For now, admins use the developer dashboard but could have a custom admin dashboard
-    return <DeveloperDashboard profile={profile} user={session.user} />
-  }
-
-  // Fallback - shouldn't happen but safety net
-  redirect('/profile/setup')
+  return (
+    <div className="min-h-screen bg-[#fafafa]">
+      <DashboardNav />
+      <main className="container py-8">
+        {profile.role === 'developer' && <DeveloperDashboard />}
+        {profile.role === 'company' && <CompanyDashboard />}
+        {profile.role === 'admin' && <DeveloperDashboard />}
+      </main>
+    </div>
+  )
 }

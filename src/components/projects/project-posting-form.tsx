@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@convex/_generated/api'
+import { Id } from '@convex/_generated/dataModel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,26 +12,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { DashboardNav } from '@/components/navigation/dashboard-nav'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
-import { Plus, X, Save, Briefcase, DollarSign, Clock, MapPin } from 'lucide-react'
-
-interface ProjectPostingFormProps {
-  user: {
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
-  companyId: string
-}
+import { Plus, X, Save, Briefcase, DollarSign, Clock, MapPin, Loader2 } from 'lucide-react'
 
 const COMMON_SKILLS = [
-  'JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'Python', 'Java', 
+  'JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'Python', 'Java',
   'C#', 'PHP', 'Go', 'Rust', 'Swift', 'Kotlin', 'Vue.js', 'Angular', 'Svelte',
   'Express.js', 'NestJS', 'Django', 'Flask', 'Rails', 'Laravel', 'Spring',
   '.NET', 'AWS', 'Google Cloud', 'Azure', 'Docker', 'Kubernetes', 'MongoDB',
@@ -59,8 +53,12 @@ const LOCATION_PREFERENCES = [
   { value: 'flexible', label: 'Flexible' }
 ]
 
-export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps) {
+export function ProjectPostingForm() {
   const router = useRouter()
+  const profile = useQuery(api.profiles.getCurrent)
+  const allSkills = useQuery(api.skills.list)
+  const createProject = useMutation(api.projects.create)
+
   const [isLoading, setIsLoading] = useState(false)
 
   // Form state
@@ -71,35 +69,33 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
   const [currency, setCurrency] = useState('USD')
   const [timeline, setTimeline] = useState('')
   const [locationPref, setLocationPref] = useState('')
-  const [requiredSkills, setRequiredSkills] = useState<string[]>([])
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Id<'skills'>[]>([])
   const [newSkill, setNewSkill] = useState('')
+
+  // Redirect if not a company
+  useEffect(() => {
+    if (profile && profile.role !== 'company') {
+      router.push('/dashboard')
+    }
+  }, [profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          budgetMin: budgetMin ? parseFloat(budgetMin) : null,
-          budgetMax: budgetMax ? parseFloat(budgetMax) : null,
-          currency,
-          timeline: timeline || null,
-          locationPref: locationPref || null,
-          requiredSkills
-        }),
+      const projectId = await createProject({
+        title: title.trim(),
+        description: description.trim(),
+        budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
+        budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
+        currency,
+        timeline: timeline || undefined,
+        locationPref: locationPref || undefined,
+        skillIds: selectedSkillIds.length > 0 ? selectedSkillIds : undefined
       })
 
-      if (response.ok) {
-        const project = await response.json()
-        router.push(`/projects/${project.id}`)
-      } else {
-        console.error('Failed to create project')
-      }
+      router.push(`/projects/${projectId}`)
     } catch (error) {
       console.error('Error creating project:', error)
     } finally {
@@ -107,68 +103,83 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
     }
   }
 
-  const addSkill = () => {
-    const skill = newSkill.trim()
-    if (skill && !requiredSkills.includes(skill)) {
-      setRequiredSkills([...requiredSkills, skill])
-      setNewSkill('')
+  const addSkillByLabel = (label: string) => {
+    if (!allSkills) return
+
+    const skill = allSkills.find(s => s.label.toLowerCase() === label.toLowerCase())
+    if (skill && !selectedSkillIds.includes(skill._id)) {
+      setSelectedSkillIds([...selectedSkillIds, skill._id])
     }
+    setNewSkill('')
   }
 
-  const removeSkill = (skillToRemove: string) => {
-    setRequiredSkills(requiredSkills.filter(skill => skill !== skillToRemove))
+  const removeSkill = (skillId: Id<'skills'>) => {
+    setSelectedSkillIds(selectedSkillIds.filter(id => id !== skillId))
+  }
+
+  const getSkillLabel = (skillId: Id<'skills'>) => {
+    return allSkills?.find(s => s._id === skillId)?.label || 'Unknown'
+  }
+
+  if (profile === undefined || allSkills === undefined) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role="company" />
-      
+    <div className="min-h-screen bg-[#fafafa]">
+      <DashboardNav />
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Post New Project</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Post New Project</h1>
+          <p className="text-gray-500 mt-1">
             Create a project posting to find the perfect developers
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Project Details */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Briefcase className="h-5 w-5" />
                 Project Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="title">Project Title</Label>
+                <Label htmlFor="title" className="text-gray-700">Project Title</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., E-commerce Platform Development"
+                  className="rounded-xl border-gray-200 mt-1"
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="description">Project Description</Label>
+                <Label htmlFor="description" className="text-gray-700">Project Description</Label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the project scope, requirements, goals, and any specific details developers should know..."
-                  className="min-h-[120px]"
+                  className="min-h-[120px] rounded-xl border-gray-200 mt-1"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="timeline">Timeline</Label>
+                  <Label htmlFor="timeline" className="text-gray-700">Timeline</Label>
                   <Select value={timeline} onValueChange={setTimeline}>
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-gray-200 mt-1">
                       <SelectValue placeholder="Select timeline" />
                     </SelectTrigger>
                     <SelectContent>
@@ -181,9 +192,9 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="locationPref">Work Location</Label>
+                  <Label htmlFor="locationPref" className="text-gray-700">Work Location</Label>
                   <Select value={locationPref} onValueChange={setLocationPref}>
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-gray-200 mt-1">
                       <SelectValue placeholder="Select preference" />
                     </SelectTrigger>
                     <SelectContent>
@@ -200,9 +211,9 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
           </Card>
 
           {/* Budget */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <DollarSign className="h-5 w-5" />
                 Budget Range
               </CardTitle>
@@ -210,7 +221,7 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="budgetMin">Minimum Budget</Label>
+                  <Label htmlFor="budgetMin" className="text-gray-700">Minimum Budget</Label>
                   <Input
                     id="budgetMin"
                     type="number"
@@ -219,10 +230,11 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
                     placeholder="5000"
                     min="0"
                     step="100"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="budgetMax">Maximum Budget</Label>
+                  <Label htmlFor="budgetMax" className="text-gray-700">Maximum Budget</Label>
                   <Input
                     id="budgetMax"
                     type="number"
@@ -231,12 +243,13 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
                     placeholder="15000"
                     min="0"
                     step="100"
+                    className="rounded-xl border-gray-200 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label htmlFor="currency" className="text-gray-700">Currency</Label>
                   <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-gray-200 mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,28 +262,28 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
                   </Select>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                💡 Tip: Projects with clear budget ranges receive 40% more quality applications
+              <p className="text-sm text-gray-500">
+                Projects with clear budget ranges receive 40% more quality applications
               </p>
             </CardContent>
           </Card>
 
           {/* Required Skills */}
-          <Card>
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle>Required Skills & Technologies</CardTitle>
+              <CardTitle className="text-gray-900">Required Skills & Technologies</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                {requiredSkills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                    {skill}
+                {selectedSkillIds.map((skillId) => (
+                  <Badge key={skillId} variant="secondary" className="flex items-center gap-1 rounded-full">
+                    {getSkillLabel(skillId)}
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => removeSkill(skill)}
+                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                      onClick={() => removeSkill(skillId)}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -286,55 +299,57 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      addSkill()
+                      addSkillByLabel(newSkill)
                     }
                   }}
                   list="skills-suggestions"
+                  className="rounded-xl border-gray-200"
                 />
                 <datalist id="skills-suggestions">
-                  {COMMON_SKILLS.map(skill => (
-                    <option key={skill} value={skill} />
+                  {allSkills?.map(skill => (
+                    <option key={skill._id} value={skill.label} />
                   ))}
                 </datalist>
-                <Button type="button" onClick={addSkill}>
+                <Button type="button" onClick={() => addSkillByLabel(newSkill)} className="rounded-full">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-semibold mb-2">Quick Add Popular Skills:</h4>
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-semibold mb-2 text-gray-900">Quick Add Popular Skills:</h4>
                 <div className="flex flex-wrap gap-2">
-                  {COMMON_SKILLS.slice(0, 12).map((skill) => (
-                    <Button
-                      key={skill}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (!requiredSkills.includes(skill)) {
-                          setRequiredSkills([...requiredSkills, skill])
-                        }
-                      }}
-                      disabled={requiredSkills.includes(skill)}
-                      className="text-xs"
-                    >
-                      {skill}
-                    </Button>
-                  ))}
+                  {COMMON_SKILLS.slice(0, 12).map((skill) => {
+                    const skillData = allSkills?.find(s => s.label === skill)
+                    const isSelected = skillData && selectedSkillIds.includes(skillData._id)
+
+                    return (
+                      <Button
+                        key={skill}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addSkillByLabel(skill)}
+                        disabled={isSelected || !skillData}
+                        className="text-xs rounded-full"
+                      >
+                        {skill}
+                      </Button>
+                    )
+                  })}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Project Requirements */}
-          <Card>
+          {/* Additional Info */}
+          <Card className="bg-white border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle className="text-gray-900">Additional Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-semibold mb-2">What happens after you post?</h4>
-                <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-semibold mb-2 text-gray-900">What happens after you post?</h4>
+                <div className="space-y-2 text-sm text-gray-500">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     <span>Your project will be visible to developers within 15 minutes</span>
@@ -354,18 +369,19 @@ export function ProjectPostingForm({ user, companyId }: ProjectPostingFormProps)
 
           {/* Submit */}
           <div className="flex gap-4">
-            <Button 
-              type="submit" 
-              disabled={isLoading || !title.trim() || !description.trim()} 
-              className="flex items-center gap-2"
+            <Button
+              type="submit"
+              disabled={isLoading || !title.trim() || !description.trim()}
+              className="flex items-center gap-2 rounded-full px-6"
             >
               <Save className="h-4 w-4" />
               {isLoading ? 'Posting...' : 'Post Project'}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => router.push('/dashboard')}
+              className="rounded-full"
             >
               Cancel
             </Button>

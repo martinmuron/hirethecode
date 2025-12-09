@@ -1,29 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { auth } from '@clerk/nextjs/server'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '@convex/_generated/api'
 import { SubscriptionService } from '@/lib/stripe/subscription'
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
+    const { userId } = await auth()
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const subscription = await SubscriptionService.getSubscriptionStatus(session.user.id)
+    // Get the user's profile from Convex
+    const convexUser = await convex.query(api.users.getByClerkId, { clerkId: userId })
+    if (!convexUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-    if (!subscription) {
-      return NextResponse.json({ 
+    const profile = await convex.query(api.profiles.getByUserId, { userId: convexUser._id })
+    if (!profile) {
+      return NextResponse.json({
         hasSubscription: false,
-        subscription: null 
+        subscription: null
       })
     }
 
-    return NextResponse.json({ 
+    const subscription = await SubscriptionService.getSubscriptionStatus(profile._id)
+
+    if (!subscription) {
+      return NextResponse.json({
+        hasSubscription: false,
+        subscription: null
+      })
+    }
+
+    return NextResponse.json({
       hasSubscription: true,
       subscription: {
-        id: subscription.id,
+        id: subscription._id,
         status: subscription.status,
         productTier: subscription.productTier,
         currentPeriodEnd: subscription.currentPeriodEnd,
@@ -43,15 +60,26 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
+    const { userId } = await auth()
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await SubscriptionService.cancelSubscription(session.user.id)
+    // Get the user's profile from Convex
+    const convexUser = await convex.query(api.users.getByClerkId, { clerkId: userId })
+    if (!convexUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-    return NextResponse.json({ 
+    const profile = await convex.query(api.profiles.getByUserId, { userId: convexUser._id })
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    await SubscriptionService.cancelSubscription(profile._id)
+
+    return NextResponse.json({
       success: true,
       message: 'Subscription canceled. Access will continue until the end of your billing period.'
     })
@@ -67,15 +95,26 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
+    const { userId } = await auth()
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await SubscriptionService.reactivateSubscription(session.user.id)
+    // Get the user's profile from Convex
+    const convexUser = await convex.query(api.users.getByClerkId, { clerkId: userId })
+    if (!convexUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-    return NextResponse.json({ 
+    const profile = await convex.query(api.profiles.getByUserId, { userId: convexUser._id })
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    await SubscriptionService.reactivateSubscription(profile._id)
+
+    return NextResponse.json({
       success: true,
       message: 'Subscription reactivated successfully.'
     })
