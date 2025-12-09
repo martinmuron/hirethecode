@@ -7,7 +7,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#fbfbfd]">
       {/* Navigation - Apple style sticky nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#fbfbfd]/80 backdrop-blur-xl border-b border-black/5">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex h-12 items-center justify-between">
             <Link href="/" className="text-xl font-semibold text-[#1d1d1f]">
               hirethecode
@@ -37,7 +37,7 @@ export default function Home() {
 
       {/* Hero Section - Large dramatic Apple style */}
       <section className="pt-32 pb-20 md:pt-44 md:pb-32">
-        <div className="max-w-[980px] mx-auto px-6 text-center">
+        <div className="max-w-[1200px] mx-auto px-6 text-center">
           <h1 className="text-[#1d1d1f] text-5xl md:text-7xl lg:text-[80px] font-semibold tracking-tight leading-[1.05]">
             Premium talent.
             <br />
@@ -64,7 +64,7 @@ export default function Home() {
 
       {/* Stats Banner */}
       <section className="py-16 bg-white border-y border-black/5">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
               { value: '2,500+', label: 'Vetted developers' },
@@ -83,7 +83,7 @@ export default function Home() {
 
       {/* For Developers Section */}
       <section id="developers" className="py-24 md:py-32">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-sm font-medium mb-6">
               <Code2 className="h-4 w-4" />
@@ -132,7 +132,7 @@ export default function Home() {
 
       {/* For Companies Section */}
       <section id="companies" className="py-24 md:py-32 bg-[#1d1d1f]">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-medium mb-6">
               <Building2 className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function Home() {
 
       {/* Pricing Section */}
       <section id="pricing" className="py-24 md:py-32">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#af52de]/10 text-[#af52de] text-sm font-medium mb-6">
               <Sparkles className="h-4 w-4" />
@@ -267,7 +267,7 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className="py-24 md:py-32 bg-gradient-to-b from-[#fbfbfd] to-white">
-        <div className="max-w-[980px] mx-auto px-6 text-center">
+        <div className="max-w-[1200px] mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-5xl font-semibold text-[#1d1d1f] tracking-tight mb-6">
             Ready to get started?
           </h2>
@@ -285,7 +285,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-12 bg-white border-t border-black/5">
-        <div className="max-w-[980px] mx-auto px-6">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-sm text-[#86868b]">
               © 2024 hirethecode. All rights reserved.
