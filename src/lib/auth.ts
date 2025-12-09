@@ -1,14 +1,13 @@
-import { getServerSession } from 'next-auth'
+import { auth } from '@clerk/nextjs'
 import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { profiles, subscriptions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import type { Profile, Subscription } from '@/lib/db/schema'
 
 export async function getUser() {
-  const session = await getServerSession(authOptions)
-  return session?.user || null
+  const { userId } = auth()
+  return userId ? { id: userId } : null
 }
 
 export async function getUserProfile(): Promise<Profile | null> {

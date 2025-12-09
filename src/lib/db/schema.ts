@@ -48,8 +48,8 @@ export const sessions = pgTable('sessions', {
 })
 
 export const profiles = pgTable('profiles', {
-  id: uuid('id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role', { enum: ['developer', 'company', 'admin', 'seeker'] }).notNull(), // Added seeker
+  id: text('id').primaryKey(),
+  role: text('role', { enum: ['developer', 'company', 'admin'] }).notNull(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   timezone: text('timezone'),
@@ -72,7 +72,7 @@ export const seekerProfiles = pgTable('seeker_profiles', {
 
 // Developer profiles
 export const developerProfiles = pgTable('developer_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
   headline: text('headline'),
   bio: text('bio'),
   rate: decimal('rate', { precision: 10, scale: 2 }),
@@ -85,7 +85,7 @@ export const developerProfiles = pgTable('developer_profiles', {
 })
 
 export const companyProfiles = pgTable('company_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
   companyName: text('company_name').notNull(),
   logoUrl: text('logo_url'),
   about: text('about'),
@@ -119,7 +119,7 @@ export const skills = pgTable('skills', {
 
 // Developer skills junction table
 export const developerSkills = pgTable('developer_skills', {
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   skillId: bigint('skill_id', { mode: 'number' }).notNull().references(() => skills.id, { onDelete: 'cascade' }),
   level: text('level', { enum: ['beginner', 'intermediate', 'advanced', 'expert'] }).notNull(),
 }, (table) => ({
@@ -142,7 +142,11 @@ export const companySkills = pgTable('company_skills', {
 
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
+<<<<<<< HEAD
   seekerId: uuid('seeker_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }), // Changed from companyId
+=======
+  companyId: text('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+>>>>>>> main
   title: text('title').notNull(),
   description: text('description').notNull(),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
@@ -185,7 +189,7 @@ export const projectIntake = pgTable('project_intake', {
 // Subscriptions (mirrors Stripe data)
 export const subscriptions = pgTable('subscriptions', {
   id: text('id').primaryKey(), // Stripe subscription ID
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   stripeCustomerId: text('stripe_customer_id').notNull(),
   productTier: text('product_tier').notNull(),
   status: text('status').notNull(),
@@ -195,7 +199,7 @@ export const subscriptions = pgTable('subscriptions', {
 // Notifications
 export const notifications = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   message: text('message').notNull(),
   type: text('type', { enum: ['application_status', 'new_message', 'project_update', 'system'] }).notNull(),
@@ -279,7 +283,7 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 export const projectApplications = pgTable('project_applications', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  developerId: uuid('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  developerId: text('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   message: text('message').notNull(),
   status: text('status', { enum: ['pending', 'accepted', 'rejected'] }).default('pending'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -293,8 +297,8 @@ export const projectApplicationsRelations = relations(projectApplications, ({ on
 // Developer contacts
 export const developerContacts = pgTable('developer_contacts', {
   id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
-  developerId: uuid('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  companyId: text('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  developerId: text('developer_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   message: text('message').notNull(),
   status: text('status', { enum: ['sent', 'read', 'replied'] }).default('sent'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -319,4 +323,7 @@ export type ProjectApplication = typeof projectApplications.$inferSelect
 export type DeveloperContact = typeof developerContacts.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
 export type Notification = typeof notifications.$inferSelect
+<<<<<<< HEAD
 export type SeekerProfile = typeof seekerProfiles.$inferSelect
+=======
+>>>>>>> main
