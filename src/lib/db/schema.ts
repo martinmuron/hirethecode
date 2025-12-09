@@ -142,11 +142,7 @@ export const companySkills = pgTable('company_skills', {
 
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
-<<<<<<< HEAD
-  seekerId: uuid('seeker_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }), // Changed from companyId
-=======
   companyId: text('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
->>>>>>> main
   title: text('title').notNull(),
   description: text('description').notNull(),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
@@ -323,7 +319,4 @@ export type ProjectApplication = typeof projectApplications.$inferSelect
 export type DeveloperContact = typeof developerContacts.$inferSelect
 export type Subscription = typeof subscriptions.$inferSelect
 export type Notification = typeof notifications.$inferSelect
-<<<<<<< HEAD
 export type SeekerProfile = typeof seekerProfiles.$inferSelect
-=======
->>>>>>> main

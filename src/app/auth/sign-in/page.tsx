@@ -1,35 +1,15 @@
+import { SignIn } from '@clerk/nextjs'
 import { Metadata } from 'next'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
-import { redirect } from 'next/navigation'
-import { SignInForm } from '@/components/auth/sign-in-form'
 
 export const metadata: Metadata = {
   title: 'Sign In - Hire the Code',
   description: 'Sign in to your Hire the Code account',
 }
 
-export default async function SignInPage() {
-  const session = await getServerSession(authOptions)
-
-  if (session) {
-    redirect('/dashboard')
-  }
-
+export default funciotn SignInPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full space-y-8 p-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold">Sign in to your account</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <a href="/auth/sign-up" className="font-medium text-primary hover:underline">
-              Sign up
-            </a>
-          </p>
-        </div>
-        <SignInForm />
-      </div>
+    <div className="flex min-h-screen items-center justify-center">
+      <SignIn />
     </div>
   )
 }
