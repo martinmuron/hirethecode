@@ -6,6 +6,7 @@ import { api } from '@convex/_generated/api'
 import { redirect } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { DeveloperSearch } from '@/components/developers/developer-search'
+import { DashboardNav } from '@/components/navigation/dashboard-nav'
 
 export default function DevelopersPage() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser()
@@ -13,8 +14,8 @@ export default function DevelopersPage() {
 
   if (!clerkLoaded || profile === undefined) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-[#fbfbfd] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#86868b]" />
       </div>
     )
   }
@@ -27,5 +28,14 @@ export default function DevelopersPage() {
     redirect('/profile/setup')
   }
 
-  return <DeveloperSearch />
+  return (
+    <div className="min-h-screen bg-[#fbfbfd]">
+      <DashboardNav />
+      <main className="pt-20 pb-12">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <DeveloperSearch />
+        </div>
+      </main>
+    </div>
+  )
 }

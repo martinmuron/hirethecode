@@ -3,11 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import {
   Select,
   SelectContent,
@@ -22,7 +18,6 @@ import {
   Clock,
   DollarSign,
   Building2,
-  Filter,
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
@@ -34,12 +29,6 @@ const FILTER_OPTIONS = [
   { value: 'recent', label: 'Posted Recently' },
   { value: 'budget-high', label: 'High Budget' }
 ]
-
-const STATUS_COLORS = {
-  open: 'bg-green-100 text-green-800 border-green-200',
-  in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
-  closed: 'bg-gray-100 text-gray-800 border-gray-200'
-}
 
 export function ProjectBoard() {
   const profile = useQuery(api.profiles.getCurrent)
@@ -84,8 +73,8 @@ export function ProjectBoard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-[#86868b]" />
       </div>
     )
   }
@@ -93,163 +82,155 @@ export function ProjectBoard() {
   const userRole = profile?.role || 'developer'
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      <DashboardNav />
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-                {userRole === 'developer' ? 'Available Projects' : 'All Projects'}
-              </h1>
-              <p className="text-gray-500 mt-1">
-                {userRole === 'developer'
-                  ? 'Discover exciting opportunities from top companies'
-                  : 'Browse all projects on the platform'
-                }
-              </p>
-            </div>
-            {userRole === 'company' && (
-              <Button asChild className="rounded-full px-6">
-                <Link href="/projects/new" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Post Project
-                </Link>
-              </Button>
-            )}
-          </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#1d1d1f]">
+            {userRole === 'developer' ? 'Available Projects' : 'All Projects'}
+          </h1>
+          <p className="text-[#86868b] mt-2 text-lg">
+            {userRole === 'developer'
+              ? 'Discover exciting opportunities from top companies'
+              : 'Browse all projects on the platform'
+            }
+          </p>
         </div>
-
-        {/* Search and Filter */}
-        <div className="mb-6 flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search projects, companies, or skills..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl border-gray-200"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-48 rounded-xl border-gray-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FILTER_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="mb-4 text-sm text-gray-500">
-          Showing {filteredProjects.length} of {projectsResult?.projects?.length || 0} projects
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <Card key={project._id} className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <Link href={`/projects/${project._id}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg line-clamp-2 text-gray-900">
-                      {project.title}
-                    </CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={`text-xs rounded-full ${STATUS_COLORS[project.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open}`}
-                    >
-                      {formatDistanceToNow(project.createdAt, { addSuffix: true })}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Building2 className="h-4 w-4" />
-                    {project.company?.companyName || 'Company'}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600 line-clamp-3">
-                    {project.description}
-                  </p>
-
-                  {/* Budget */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <span className="text-green-600 font-medium">
-                      {formatBudget(project.budgetMin, project.budgetMax, project.currency)}
-                    </span>
-                  </div>
-
-                  {/* Timeline and Location */}
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    {project.timeline && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{project.timeline}</span>
-                      </div>
-                    )}
-                    {project.locationPref && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span className="capitalize">{project.locationPref}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Skills */}
-                  {project.skills && project.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {project.skills.slice(0, 4).map((skill) => (
-                        skill && (
-                          <Badge key={skill._id} variant="outline" className="text-xs rounded-full">
-                            {skill.label}
-                          </Badge>
-                        )
-                      ))}
-                      {project.skills.length > 4 && (
-                        <Badge variant="outline" className="text-xs rounded-full">
-                          +{project.skills.length - 4} more
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Application count */}
-                  {project.applicationCount > 0 && (
-                    <div className="text-xs text-gray-400">
-                      {project.applicationCount} application{project.applicationCount !== 1 ? 's' : ''}
-                    </div>
-                  )}
-                </CardContent>
-              </Link>
-            </Card>
-          ))}
-        </div>
-
-        {filteredProjects.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">
-              {searchTerm || filter !== 'all'
-                ? 'No projects match your search criteria'
-                : 'No projects available at the moment'
-              }
-            </div>
-            {userRole === 'company' && (
-              <Button asChild className="rounded-full">
-                <Link href="/projects/new">Post the First Project</Link>
-              </Button>
-            )}
-          </div>
+        {userRole === 'company' && (
+          <Button asChild className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-6 h-11">
+            <Link href="/projects/new" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Post Project
+            </Link>
+          </Button>
         )}
       </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#86868b]" />
+          <input
+            placeholder="Search projects, companies, or skills..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-12 pl-12 pr-4 rounded-xl bg-white border border-black/10 text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3] transition-all"
+          />
+        </div>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-full md:w-48 h-12 rounded-xl bg-white border-black/10 text-[#1d1d1f]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl bg-white border-black/10">
+            {FILTER_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results count */}
+      <div className="text-sm text-[#86868b]">
+        Showing {filteredProjects.length} of {projectsResult?.projects?.length || 0} projects
+      </div>
+
+      {/* Projects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProjects.map((project) => (
+          <Link
+            key={project._id}
+            href={`/projects/${project._id}`}
+            className="group p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 hover:shadow-lg transition-all duration-300"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="text-lg font-semibold text-[#1d1d1f] line-clamp-2 group-hover:text-[#0071e3] transition-colors">
+                {project.title}
+              </h3>
+              <span className="flex-shrink-0 ml-3 text-xs text-[#86868b]">
+                {formatDistanceToNow(project.createdAt, { addSuffix: true })}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-[#86868b] mb-4">
+              <Building2 className="h-4 w-4" />
+              {project.company?.companyName || 'Company'}
+            </div>
+
+            <p className="text-sm text-[#86868b] line-clamp-3 mb-4">
+              {project.description}
+            </p>
+
+            {/* Budget */}
+            <div className="flex items-center gap-2 text-sm mb-4">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34c759]/10">
+                <DollarSign className="h-3.5 w-3.5 text-[#34c759]" />
+                <span className="text-[#34c759] font-medium text-xs">
+                  {formatBudget(project.budgetMin, project.budgetMax, project.currency)}
+                </span>
+              </div>
+            </div>
+
+            {/* Timeline and Location */}
+            <div className="flex items-center gap-4 text-xs text-[#86868b] mb-4">
+              {project.timeline && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{project.timeline}</span>
+                </div>
+              )}
+              {project.locationPref && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="capitalize">{project.locationPref}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Skills */}
+            {project.skills && project.skills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {project.skills.slice(0, 4).map((skill) => (
+                  skill && (
+                    <span key={skill._id} className="px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium">
+                      {skill.label}
+                    </span>
+                  )
+                ))}
+                {project.skills.length > 4 && (
+                  <span className="px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#86868b] text-xs">
+                    +{project.skills.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Application count */}
+            {project.applicationCount > 0 && (
+              <div className="text-xs text-[#86868b]">
+                {project.applicationCount} application{project.applicationCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {filteredProjects.length === 0 && (
+        <div className="text-center py-16">
+          <div className="text-[#86868b] mb-6 text-lg">
+            {searchTerm || filter !== 'all'
+              ? 'No projects match your search criteria'
+              : 'No projects available at the moment'
+            }
+          </div>
+          {userRole === 'company' && (
+            <Button asChild className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-8 h-11">
+              <Link href="/projects/new">Post the First Project</Link>
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

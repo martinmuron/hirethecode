@@ -17,8 +17,8 @@ export default function DashboardPage() {
   // Loading state
   if (!clerkLoaded || profileData === undefined) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-[#fbfbfd] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#86868b]" />
       </div>
     )
   }
@@ -36,12 +36,14 @@ export default function DashboardPage() {
   const { profile } = profileData
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-[#fbfbfd]">
       <DashboardNav />
-      <main className="container py-8">
-        {profile.role === 'developer' && <DeveloperDashboard />}
-        {profile.role === 'company' && <CompanyDashboard />}
-        {profile.role === 'admin' && <DeveloperDashboard />}
+      <main className="pt-20 pb-12">
+        <div className="max-w-[1200px] mx-auto px-6">
+          {profile.role === 'developer' && <DeveloperDashboard />}
+          {profile.role === 'company' && <CompanyDashboard />}
+          {profile.role === 'admin' && <DeveloperDashboard />}
+        </div>
       </main>
     </div>
   )

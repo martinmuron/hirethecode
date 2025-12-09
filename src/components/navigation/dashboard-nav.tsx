@@ -32,34 +32,32 @@ export function DashboardNav() {
     ...(role === 'developer' ? [
       { name: 'Profile', href: '/profile' },
     ] : role === 'company' ? [
-      { name: 'Company Dashboard', href: '/company/dashboard' },
-      { name: 'Manage Projects', href: '/company/projects' },
-      { name: 'Company Profile', href: '/profile' },
+      { name: 'Company', href: '/company/dashboard' },
+      { name: 'My Projects', href: '/company/projects' },
     ] : role === 'admin' ? [
-      { name: 'Admin Panel', href: '/admin' },
-      { name: 'Profile', href: '/profile' },
+      { name: 'Admin', href: '/admin' },
     ] : []),
   ]
 
   return (
-    <nav className="border-b bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-      <div className="container flex h-16 items-center">
-        <div className="mr-4 flex">
-          <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
-            <span className="font-semibold text-xl tracking-tight">Hire the Code</span>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#fbfbfd]/80 backdrop-blur-xl border-b border-black/5">
+      <div className="max-w-[1200px] mx-auto px-6">
+        <div className="flex h-12 items-center justify-between">
+          {/* Logo */}
+          <Link href="/dashboard" className="text-xl font-semibold text-[#1d1d1f]">
+            hirethecode
           </Link>
-        </div>
 
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="flex items-center space-x-1 text-sm font-medium">
+          {/* Center Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
             {navigation.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                  pathname === item.href
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 ${
+                  pathname === item.href || pathname.startsWith(item.href + '/')
+                    ? 'bg-[#1d1d1f] text-white'
+                    : 'text-[#1d1d1f]/70 hover:text-[#1d1d1f] hover:bg-black/5'
                 }`}
               >
                 {item.name}
@@ -67,76 +65,79 @@ export function DashboardNav() {
             ))}
           </nav>
 
-          <div className="flex items-center space-x-2">
+          {/* Right Actions */}
+          <div className="flex items-center gap-3">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
-              <Link href="/notifications">
-                <Bell className="h-5 w-5 text-gray-600" />
-                {notificationCount && notificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
-                    {notificationCount > 9 ? '9+' : notificationCount}
-                  </span>
-                )}
-              </Link>
-            </Button>
+            <Link
+              href="/notifications"
+              className="relative p-2 rounded-full text-[#1d1d1f]/70 hover:text-[#1d1d1f] hover:bg-black/5 transition-colors"
+            >
+              <Bell className="h-5 w-5" />
+              {notificationCount && notificationCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-[#ff3b30] text-white text-[10px] font-medium flex items-center justify-center">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
+            </Link>
 
+            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+                <button className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-black/5 hover:ring-black/10 transition-all">
+                  <Avatar className="h-8 w-8">
                     <AvatarImage
                       src={clerkUser?.imageUrl || profile?.avatarUrl || undefined}
                       alt={clerkUser?.fullName || profile?.displayName || ''}
                     />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                    <AvatarFallback className="bg-gradient-to-br from-[#0071e3] to-[#5856d6] text-white text-sm">
                       {clerkUser?.firstName?.charAt(0) || profile?.displayName?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                </Button>
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 rounded-xl p-2" align="end" forceMount>
-                <div className="flex items-center justify-start gap-3 p-2">
+              <DropdownMenuContent className="w-64 rounded-2xl p-2 bg-white/90 backdrop-blur-xl border border-black/5 shadow-lg" align="end" forceMount>
+                <div className="flex items-center gap-3 p-3 mb-1">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={clerkUser?.imageUrl || profile?.avatarUrl || undefined}
                       alt={clerkUser?.fullName || ''}
                     />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                    <AvatarFallback className="bg-gradient-to-br from-[#0071e3] to-[#5856d6] text-white">
                       {clerkUser?.firstName?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col space-y-0.5 leading-none">
-                    <p className="font-medium text-sm">
+                  <div className="flex flex-col">
+                    <p className="font-medium text-sm text-[#1d1d1f]">
                       {clerkUser?.fullName || profile?.displayName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-[#86868b]">
                       {clerkUser?.primaryEmailAddress?.emailAddress}
                     </p>
                   </div>
                 </div>
-                <DropdownMenuSeparator className="my-2" />
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                <DropdownMenuSeparator className="bg-black/5" />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer text-[#1d1d1f] focus:bg-black/5 focus:text-[#1d1d1f] py-2.5">
                   <Link href="/profile">
-                    <User className="mr-2 h-4 w-4" />
+                    <User className="mr-3 h-4 w-4 text-[#86868b]" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer text-[#1d1d1f] focus:bg-black/5 focus:text-[#1d1d1f] py-2.5">
                   <Link href="/billing">
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="mr-3 h-4 w-4 text-[#86868b]" />
                     Billing & Settings
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuSeparator className="bg-black/5" />
                 <DropdownMenuItem
-                  className="rounded-lg cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                  className="rounded-lg cursor-pointer text-[#ff3b30] focus:text-[#ff3b30] focus:bg-[#ff3b30]/10 py-2.5"
                   onSelect={(event) => {
                     event.preventDefault()
                     signOut({ redirectUrl: '/' })
                   }}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                  <LogOut className="mr-3 h-4 w-4" />
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

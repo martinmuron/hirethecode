@@ -2,9 +2,7 @@
 
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import {
   Briefcase,
@@ -13,8 +11,8 @@ import {
   Plus,
   ArrowRight,
   Search,
-  Sparkles,
   FileText,
+  Clock,
 } from 'lucide-react'
 
 export function CompanyDashboard() {
@@ -30,23 +28,24 @@ export function CompanyDashboard() {
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#1d1d1f]">
             Welcome back, {displayName}
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-[#86868b] mt-2 text-lg">
             Find the perfect developers for your projects
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button asChild variant="outline" className="rounded-full px-6">
-            <Link href="/developers">
-              <Search className="mr-2 h-4 w-4" />
-              Find Developers
-            </Link>
-          </Button>
-          <Button asChild className="rounded-full px-6">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/developers"
+            className="inline-flex items-center justify-center h-11 px-6 rounded-full border border-black/10 text-sm font-medium text-[#1d1d1f] hover:bg-black/5 transition-colors"
+          >
+            <Search className="mr-2 h-4 w-4" />
+            Find Developers
+          </Link>
+          <Button asChild className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-6 h-11 text-base">
             <Link href="/projects/new">
               <Plus className="mr-2 h-4 w-4" />
               Post Project
@@ -56,249 +55,238 @@ export function CompanyDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Projects</p>
-                <p className="text-3xl font-semibold text-gray-900 mt-1">
-                  {stats?.totalProjects ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
-                <Briefcase className="h-6 w-6 text-blue-500" />
-              </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#86868b]">Total Projects</p>
+              <p className="text-3xl font-semibold text-[#1d1d1f] mt-1">
+                {stats?.totalProjects ?? 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-11 w-11 rounded-full bg-[#0071e3]/10 flex items-center justify-center">
+              <Briefcase className="h-5 w-5 text-[#0071e3]" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Active Projects</p>
-                <p className="text-3xl font-semibold text-gray-900 mt-1">
-                  {stats?.activeProjects ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-green-500" />
-              </div>
+        <div className="p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#86868b]">Active Projects</p>
+              <p className="text-3xl font-semibold text-[#1d1d1f] mt-1">
+                {stats?.activeProjects ?? 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-11 w-11 rounded-full bg-[#34c759]/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-[#34c759]" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Applications</p>
-                <p className="text-3xl font-semibold text-gray-900 mt-1">
-                  {stats?.totalApplications ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center">
-                <Users className="h-6 w-6 text-purple-500" />
-              </div>
+        <div className="p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#86868b]">Total Applications</p>
+              <p className="text-3xl font-semibold text-[#1d1d1f] mt-1">
+                {stats?.totalApplications ?? 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-11 w-11 rounded-full bg-[#af52de]/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-[#af52de]" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Pending Review</p>
-                <p className="text-3xl font-semibold text-gray-900 mt-1">
-                  {stats?.pendingApplications ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-orange-50 flex items-center justify-center">
-                <CreditCard className="h-6 w-6 text-orange-500" />
-              </div>
+        <div className="p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#86868b]">Pending Review</p>
+              <p className="text-3xl font-semibold text-[#1d1d1f] mt-1">
+                {stats?.pendingApplications ?? 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-11 w-11 rounded-full bg-[#ff9500]/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-[#ff9500]" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Company Profile */}
-        <Card className="bg-white border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">Company Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Profile Status</span>
-                <Badge variant="secondary" className="rounded-full">
-                  {companyProfile?.companyProfile?.about ? 'Complete' : 'Incomplete'}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Industry</span>
-                <span className="font-medium">
-                  {companyProfile?.companyProfile?.industry || 'Not set'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Company Size</span>
-                <span className="font-medium">
-                  {companyProfile?.companyProfile?.size || 'Not set'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Subscription</span>
-                <Badge
-                  variant={subscription?.status === 'active' ? 'default' : 'secondary'}
-                  className="rounded-full"
-                >
-                  {subscription?.status === 'active' ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
+        <div className="p-6 rounded-2xl bg-white border border-black/5">
+          <h3 className="text-lg font-semibold text-[#1d1d1f] mb-4">Company Profile</h3>
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#86868b]">Profile Status</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                companyProfile?.companyProfile?.about
+                  ? 'bg-[#34c759]/10 text-[#34c759]'
+                  : 'bg-[#ff9500]/10 text-[#ff9500]'
+              }`}>
+                {companyProfile?.companyProfile?.about ? 'Complete' : 'Incomplete'}
+              </span>
             </div>
-            <Button asChild className="w-full rounded-full" variant="outline">
-              <Link href="/profile">
-                Edit Profile
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#86868b]">Industry</span>
+              <span className="text-sm font-medium text-[#1d1d1f]">
+                {companyProfile?.companyProfile?.industry || 'Not set'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#86868b]">Company Size</span>
+              <span className="text-sm font-medium text-[#1d1d1f]">
+                {companyProfile?.companyProfile?.size || 'Not set'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#86868b]">Subscription</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                subscription?.status === 'active'
+                  ? 'bg-[#34c759]/10 text-[#34c759]'
+                  : 'bg-[#86868b]/10 text-[#86868b]'
+              }`}>
+                {subscription?.status === 'active' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/profile"
+            className="flex items-center justify-center w-full h-10 rounded-full border border-black/10 text-sm font-medium text-[#1d1d1f] hover:bg-black/5 transition-colors"
+          >
+            Edit Profile
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </div>
 
         {/* Recent Projects */}
-        <Card className="bg-white border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">Recent Projects</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {projects && projects.length > 0 ? (
-              <div className="space-y-3">
-                {projects.slice(0, 3).map((project) => (
-                  <Link
-                    key={project._id}
-                    href={`/projects/${project._id}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">{project.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {project.applicationCount} applications
-                      </p>
-                    </div>
-                    <Badge
-                      variant={project.status === 'open' ? 'default' : 'secondary'}
-                      className="rounded-full capitalize"
-                    >
-                      {project.status}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                No projects yet. Post your first project to get started.
-              </p>
-            )}
-            <Button asChild className="w-full mt-4 rounded-full">
-              <Link href="/projects/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Post New Project
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="bg-white border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button asChild variant="outline" className="w-full justify-start rounded-xl h-12">
-              <Link href="/developers">
-                <Search className="mr-3 h-4 w-4 text-gray-500" />
-                Search Developers
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-start rounded-xl h-12">
-              <Link href="/company/projects">
-                <Briefcase className="mr-3 h-4 w-4 text-gray-500" />
-                Manage Projects
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-start rounded-xl h-12">
-              <Link href="/billing">
-                <CreditCard className="mr-3 h-4 w-4 text-gray-500" />
-                Billing Settings
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Applications */}
-      <Card className="bg-white border-gray-100 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Recent Applications</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="rounded-full">
-              <Link href="/company/applications">View All</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recentApplications && recentApplications.length > 0 ? (
-            <div className="space-y-3">
-              {recentApplications.map((item) => (
-                <div
-                  key={item.application._id}
-                  className="flex items-center justify-between p-4 rounded-xl bg-gray-50"
+        <div className="p-6 rounded-2xl bg-white border border-black/5">
+          <h3 className="text-lg font-semibold text-[#1d1d1f] mb-4">Recent Projects</h3>
+          {projects && projects.length > 0 ? (
+            <div className="space-y-3 mb-4">
+              {projects.slice(0, 3).map((project) => (
+                <Link
+                  key={project._id}
+                  href={`/projects/${project._id}`}
+                  className="flex items-center justify-between p-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-colors"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                      {item.developer?.profile?.displayName?.charAt(0) || 'D'}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {item.developer?.profile?.displayName || 'Developer'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Applied to: {item.project?.title}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="font-medium text-sm text-[#1d1d1f]">{project.title}</p>
+                    <p className="text-xs text-[#86868b]">
+                      {project.applicationCount} applications
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge
-                      variant={
-                        item.application.status === 'accepted'
-                          ? 'default'
-                          : item.application.status === 'rejected'
-                          ? 'destructive'
-                          : 'secondary'
-                      }
-                      className="rounded-full capitalize"
-                    >
-                      {item.application.status}
-                    </Badge>
-                    <Button variant="ghost" size="sm" asChild className="rounded-full">
-                      <Link href={`/developers/${item.developer?.profile?._id}`}>
-                        View Profile
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                    project.status === 'open'
+                      ? 'bg-[#34c759]/10 text-[#34c759]'
+                      : 'bg-[#86868b]/10 text-[#86868b]'
+                  }`}>
+                    {project.status}
+                  </span>
+                </Link>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">
-              No applications yet. Post a project to start receiving applications.
+            <p className="text-sm text-[#86868b] mb-4">
+              No projects yet. Post your first project to get started.
             </p>
           )}
-        </CardContent>
-      </Card>
+          <Button asChild className="w-full rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white h-10">
+            <Link href="/projects/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Post New Project
+            </Link>
+          </Button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="p-6 rounded-2xl bg-white border border-black/5">
+          <h3 className="text-lg font-semibold text-[#1d1d1f] mb-4">Quick Actions</h3>
+          <div className="space-y-2">
+            <Link
+              href="/developers"
+              className="flex items-center w-full h-12 px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-colors"
+            >
+              <Search className="h-4 w-4 text-[#86868b] mr-3" />
+              <span className="text-sm font-medium text-[#1d1d1f]">Search Developers</span>
+            </Link>
+            <Link
+              href="/company/projects"
+              className="flex items-center w-full h-12 px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-colors"
+            >
+              <Briefcase className="h-4 w-4 text-[#86868b] mr-3" />
+              <span className="text-sm font-medium text-[#1d1d1f]">Manage Projects</span>
+            </Link>
+            <Link
+              href="/billing"
+              className="flex items-center w-full h-12 px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-colors"
+            >
+              <CreditCard className="h-4 w-4 text-[#86868b] mr-3" />
+              <span className="text-sm font-medium text-[#1d1d1f]">Billing Settings</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Applications */}
+      <div className="p-6 rounded-2xl bg-white border border-black/5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-[#1d1d1f]">Recent Applications</h3>
+          <Link
+            href="/company/applications"
+            className="text-sm text-[#0071e3] hover:underline"
+          >
+            View All
+          </Link>
+        </div>
+        {recentApplications && recentApplications.length > 0 ? (
+          <div className="space-y-3">
+            {recentApplications.map((item) => (
+              <div
+                key={item.application._id}
+                className="flex items-center justify-between p-4 rounded-xl bg-[#f5f5f7]"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#0071e3] to-[#5856d6] flex items-center justify-center text-white font-medium text-sm">
+                    {item.developer?.profile?.displayName?.charAt(0) || 'D'}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-[#1d1d1f]">
+                      {item.developer?.profile?.displayName || 'Developer'}
+                    </p>
+                    <p className="text-xs text-[#86868b]">
+                      Applied to: {item.project?.title}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                    item.application.status === 'accepted'
+                      ? 'bg-[#34c759]/10 text-[#34c759]'
+                      : item.application.status === 'rejected'
+                      ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                      : 'bg-[#ff9500]/10 text-[#ff9500]'
+                  }`}>
+                    {item.application.status}
+                  </span>
+                  <Link
+                    href={`/developers/${item.developer?.profile?._id}`}
+                    className="text-sm text-[#0071e3] hover:underline"
+                  >
+                    View Profile
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#86868b] text-center py-8">
+            No applications yet. Post a project to start receiving applications.
+          </p>
+        )}
+      </div>
     </div>
   )
 }

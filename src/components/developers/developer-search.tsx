@@ -4,12 +4,8 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { Id } from '@convex/_generated/dataModel'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { DashboardNav } from '@/components/navigation/dashboard-nav'
 import {
   Select,
   SelectContent,
@@ -21,12 +17,12 @@ import {
   Search,
   MapPin,
   DollarSign,
-  Filter,
   Globe,
   Github,
   Briefcase,
   Mail,
-  Loader2
+  Loader2,
+  Check
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -109,12 +105,12 @@ export function DeveloperSearch() {
     })
   }, [developersResult?.developers, searchTerm])
 
-  const getAvailabilityColor = (availability: string | null | undefined) => {
+  const getAvailabilityStyle = (availability: string | null | undefined) => {
     switch (availability) {
-      case 'available': return 'bg-green-100 text-green-800 border-green-200'
-      case 'busy': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'unavailable': return 'bg-red-100 text-red-800 border-red-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'available': return 'bg-[#34c759]/10 text-[#34c759]'
+      case 'busy': return 'bg-[#ff9500]/10 text-[#ff9500]'
+      case 'unavailable': return 'bg-[#ff3b30]/10 text-[#ff3b30]'
+      default: return 'bg-[#86868b]/10 text-[#86868b]'
     }
   }
 
@@ -138,8 +134,8 @@ export function DeveloperSearch() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-[#86868b]" />
       </div>
     )
   }
@@ -147,245 +143,246 @@ export function DeveloperSearch() {
   const userRole = profile?.role || 'developer'
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      <DashboardNav />
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Find Developers</h1>
-          <p className="text-gray-500 mt-1">
-            Discover talented developers for your projects
-          </p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search developers by name, skills, location..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl border-gray-200"
-            />
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <span className="text-sm font-medium text-gray-600">Filters:</span>
-            </div>
-
-            <Select value={availabilityFilter} onValueChange={(v) => setAvailabilityFilter(v as typeof availabilityFilter)}>
-              <SelectTrigger className="w-48 rounded-xl border-gray-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABILITY_FILTERS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={rateFilter} onValueChange={setRateFilter}>
-              <SelectTrigger className="w-48 rounded-xl border-gray-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {RATE_FILTERS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={skillFilter} onValueChange={setSkillFilter}>
-              <SelectTrigger className="w-48 rounded-xl border-gray-200">
-                <SelectValue placeholder="Filter by skill" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Skills</SelectItem>
-                {SKILL_FILTERS.map(skill => (
-                  <SelectItem key={skill} value={skill}>
-                    {skill}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 rounded-xl border-gray-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recently Joined</SelectItem>
-                <SelectItem value="rate-low">Rate: Low to High</SelectItem>
-                <SelectItem value="rate-high">Rate: High to Low</SelectItem>
-                <SelectItem value="available">Available First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="mb-4 text-sm text-gray-500">
-          Showing {filteredDevelopers.length} developers
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDevelopers.map((developer) => (
-            <Card key={developer.id} className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 ring-2 ring-gray-100">
-                      <AvatarImage src={developer.profile?.avatarUrl || undefined} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                        {developer.profile?.displayName?.charAt(0) || 'D'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg text-gray-900">
-                        {developer.profile?.displayName || 'Developer'}
-                      </CardTitle>
-                      {developer.developerProfile?.headline && (
-                        <p className="text-sm text-gray-500 line-clamp-1">
-                          {developer.developerProfile.headline}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {developer.developerProfile?.availability && (
-                    <Badge
-                      variant="outline"
-                      className={`text-xs capitalize rounded-full ${getAvailabilityColor(developer.developerProfile.availability)}`}
-                    >
-                      {developer.developerProfile.availability}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Bio */}
-                {developer.developerProfile?.bio && (
-                  <p className="text-sm text-gray-600 line-clamp-3">
-                    {developer.developerProfile.bio}
-                  </p>
-                )}
-
-                {/* Rate and Location */}
-                <div className="flex items-center justify-between text-sm">
-                  {developer.developerProfile?.rate && (
-                    <div className="flex items-center gap-1 text-green-600 font-medium">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{formatRate(developer.developerProfile.rate)}</span>
-                    </div>
-                  )}
-                  {developer.developerProfile?.country && (
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <MapPin className="h-4 w-4" />
-                      <span>{developer.developerProfile.country}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Skills */}
-                {developer.skills && developer.skills.length > 0 && (
-                  <div>
-                    <div className="flex flex-wrap gap-1">
-                      {developer.skills.slice(0, 4).map((skill) => (
-                        skill && (
-                          <Badge key={skill._id} variant="secondary" className="text-xs rounded-full">
-                            {skill.label}
-                          </Badge>
-                        )
-                      ))}
-                      {developer.skills.length > 4 && (
-                        <Badge variant="secondary" className="text-xs rounded-full">
-                          +{developer.skills.length - 4} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Links */}
-                <div className="flex items-center gap-2">
-                  {developer.developerProfile?.portfolioUrl && (
-                    <Button size="sm" variant="outline" asChild className="rounded-full">
-                      <a href={developer.developerProfile.portfolioUrl} target="_blank" rel="noopener noreferrer">
-                        <Briefcase className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  )}
-                  {developer.developerProfile?.githubUrl && (
-                    <Button size="sm" variant="outline" asChild className="rounded-full">
-                      <a href={developer.developerProfile.githubUrl} target="_blank" rel="noopener noreferrer">
-                        <Github className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  )}
-                  {developer.developerProfile?.websiteUrl && (
-                    <Button size="sm" variant="outline" asChild className="rounded-full">
-                      <a href={developer.developerProfile.websiteUrl} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  {userRole === 'company' && (
-                    <Button
-                      size="sm"
-                      className="flex-1 flex items-center gap-2 rounded-full"
-                      onClick={() => handleContact(developer.id)}
-                    >
-                      <Mail className="h-3 w-3" />
-                      Contact
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" asChild className={`rounded-full ${userRole !== 'company' ? 'flex-1' : ''}`}>
-                    <Link href={`/developers/${developer.id}`}>
-                      View Profile
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredDevelopers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">
-              {searchTerm || availabilityFilter !== 'all' || rateFilter !== 'all' || skillFilter !== 'all'
-                ? 'No developers match your search criteria'
-                : 'No developers available at the moment'
-              }
-            </div>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => {
-                setSearchTerm('')
-                setAvailabilityFilter('all')
-                setRateFilter('all')
-                setSkillFilter('all')
-              }}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        )}
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#1d1d1f]">
+          Find Developers
+        </h1>
+        <p className="text-[#86868b] mt-2 text-lg">
+          Discover talented developers for your projects
+        </p>
       </div>
+
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#86868b]" />
+          <input
+            placeholder="Search developers by name, skills, location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-12 pl-12 pr-4 rounded-xl bg-white border border-black/10 text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3] transition-all"
+          />
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3">
+          <Select value={availabilityFilter} onValueChange={(v) => setAvailabilityFilter(v as typeof availabilityFilter)}>
+            <SelectTrigger className="w-40 h-10 rounded-xl bg-white border-black/10 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white border-black/10">
+              {AVAILABILITY_FILTERS.map(option => (
+                <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={rateFilter} onValueChange={setRateFilter}>
+            <SelectTrigger className="w-40 h-10 rounded-xl bg-white border-black/10 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white border-black/10">
+              {RATE_FILTERS.map(option => (
+                <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={skillFilter} onValueChange={setSkillFilter}>
+            <SelectTrigger className="w-40 h-10 rounded-xl bg-white border-black/10 text-sm">
+              <SelectValue placeholder="Filter by skill" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white border-black/10">
+              <SelectItem value="all" className="rounded-lg">All Skills</SelectItem>
+              {SKILL_FILTERS.map(skill => (
+                <SelectItem key={skill} value={skill} className="rounded-lg">
+                  {skill}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-44 h-10 rounded-xl bg-white border-black/10 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white border-black/10">
+              <SelectItem value="recent" className="rounded-lg">Recently Joined</SelectItem>
+              <SelectItem value="rate-low" className="rounded-lg">Rate: Low to High</SelectItem>
+              <SelectItem value="rate-high" className="rounded-lg">Rate: High to Low</SelectItem>
+              <SelectItem value="available" className="rounded-lg">Available First</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Results count */}
+      <div className="text-sm text-[#86868b]">
+        Showing {filteredDevelopers.length} developers
+      </div>
+
+      {/* Developer Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredDevelopers.map((developer) => (
+          <div key={developer.id} className="p-6 rounded-2xl bg-white border border-black/5 hover:border-black/10 hover:shadow-lg transition-all duration-300">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 ring-2 ring-black/5">
+                  <AvatarImage src={developer.profile?.avatarUrl || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-[#0071e3] to-[#5856d6] text-white">
+                    {developer.profile?.displayName?.charAt(0) || 'D'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-base font-semibold text-[#1d1d1f]">
+                    {developer.profile?.displayName || 'Developer'}
+                  </h3>
+                  {developer.developerProfile?.headline && (
+                    <p className="text-sm text-[#86868b] line-clamp-1">
+                      {developer.developerProfile.headline}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {developer.developerProfile?.availability && (
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getAvailabilityStyle(developer.developerProfile.availability)}`}>
+                  {developer.developerProfile.availability === 'available' && (
+                    <Check className="h-3 w-3 mr-1" />
+                  )}
+                  {developer.developerProfile.availability}
+                </span>
+              )}
+            </div>
+
+            {/* Bio */}
+            {developer.developerProfile?.bio && (
+              <p className="text-sm text-[#86868b] line-clamp-3 mb-4">
+                {developer.developerProfile.bio}
+              </p>
+            )}
+
+            {/* Rate and Location */}
+            <div className="flex items-center justify-between text-sm mb-4">
+              {developer.developerProfile?.rate && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34c759]/10">
+                  <DollarSign className="h-3.5 w-3.5 text-[#34c759]" />
+                  <span className="text-[#34c759] font-medium text-xs">
+                    {formatRate(developer.developerProfile.rate)}
+                  </span>
+                </div>
+              )}
+              {developer.developerProfile?.country && (
+                <div className="flex items-center gap-1.5 text-[#86868b]">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="text-xs">{developer.developerProfile.country}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Skills */}
+            {developer.skills && developer.skills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {developer.skills.slice(0, 4).map((skill) => (
+                  skill && (
+                    <span key={skill._id} className="px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium">
+                      {skill.label}
+                    </span>
+                  )
+                ))}
+                {developer.skills.length > 4 && (
+                  <span className="px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#86868b] text-xs">
+                    +{developer.skills.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Links */}
+            <div className="flex items-center gap-2 mb-4">
+              {developer.developerProfile?.portfolioUrl && (
+                <a
+                  href={developer.developerProfile.portfolioUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                >
+                  <Briefcase className="h-4 w-4" />
+                </a>
+              )}
+              {developer.developerProfile?.githubUrl && (
+                <a
+                  href={developer.developerProfile.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                >
+                  <Github className="h-4 w-4" />
+                </a>
+              )}
+              {developer.developerProfile?.websiteUrl && (
+                <a
+                  href={developer.developerProfile.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                >
+                  <Globe className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              {userRole === 'company' && (
+                <Button
+                  size="sm"
+                  className="flex-1 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white h-10"
+                  onClick={() => handleContact(developer.id)}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact
+                </Button>
+              )}
+              <Link
+                href={`/developers/${developer.id}`}
+                className={`inline-flex items-center justify-center h-10 rounded-full border border-black/10 text-sm font-medium text-[#1d1d1f] hover:bg-black/5 transition-colors ${userRole !== 'company' ? 'flex-1' : 'px-4'}`}
+              >
+                View Profile
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {filteredDevelopers.length === 0 && (
+        <div className="text-center py-16">
+          <div className="text-[#86868b] mb-6 text-lg">
+            {searchTerm || availabilityFilter !== 'all' || rateFilter !== 'all' || skillFilter !== 'all'
+              ? 'No developers match your search criteria'
+              : 'No developers available at the moment'
+            }
+          </div>
+          <button
+            className="inline-flex items-center justify-center h-10 px-6 rounded-full border border-black/10 text-sm font-medium text-[#1d1d1f] hover:bg-black/5 transition-colors"
+            onClick={() => {
+              setSearchTerm('')
+              setAvailabilityFilter('all')
+              setRateFilter('all')
+              setSkillFilter('all')
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
+      )}
     </div>
   )
 }

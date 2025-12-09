@@ -1,519 +1,300 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { CheckCircle, Users, Zap, Shield, Star, ArrowRight } from 'lucide-react'
+import { ArrowRight, Code2, Building2, Sparkles, Check } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-50">
-        <div className="container flex h-16 items-center">
-          <div className="mr-4 flex">
-            <Link className="mr-6 flex items-center space-x-2" href="/">
-              <span className="font-semibold text-xl tracking-tight">Hire the Code</span>
+    <div className="min-h-screen bg-[#fbfbfd]">
+      {/* Navigation - Apple style sticky nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#fbfbfd]/80 backdrop-blur-xl border-b border-black/5">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="flex h-12 items-center justify-between">
+            <Link href="/" className="text-xl font-semibold text-[#1d1d1f]">
+              hirethecode
             </Link>
-          </div>
-          <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <nav className="flex items-center space-x-1 text-sm font-medium">
-              <Link
-                href="#features"
-                className="px-4 py-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
-              >
-                Features
+            <div className="hidden md:flex items-center gap-8 text-sm">
+              <Link href="#developers" className="text-[#1d1d1f]/80 hover:text-[#1d1d1f] transition-colors">
+                Developers
               </Link>
-              <Link
-                href="#pricing"
-                className="px-4 py-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
-              >
+              <Link href="#companies" className="text-[#1d1d1f]/80 hover:text-[#1d1d1f] transition-colors">
+                Companies
+              </Link>
+              <Link href="#pricing" className="text-[#1d1d1f]/80 hover:text-[#1d1d1f] transition-colors">
                 Pricing
               </Link>
-              <Link
-                href="/sign-in"
-                className="px-4 py-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
-              >
-                Sign In
+            </div>
+            <div className="flex items-center gap-4">
+              <Link href="/sign-in" className="text-sm text-[#1d1d1f]/80 hover:text-[#1d1d1f] transition-colors">
+                Sign in
               </Link>
-              <Button asChild className="ml-2 rounded-full px-6">
-                <Link href="/sign-up">Get Started</Link>
+              <Button asChild size="sm" className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-4 h-8 text-sm">
+                <Link href="/sign-up">Get started</Link>
               </Button>
-            </nav>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-24 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50"></div>
-        <div className="container relative">
-          <div className="mx-auto max-w-4xl text-center">
-            <Badge className="mb-6 rounded-full px-4 py-1.5 text-sm font-medium bg-white border border-gray-200 text-gray-700">
-              Premium Developer Marketplace
-            </Badge>
-            <h1 className="text-5xl font-semibold tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
-              Premium Talent for{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Every Project
-              </span>
-            </h1>
-            <p className="mt-6 text-xl leading-8 text-gray-600 max-w-3xl mx-auto">
-              The exclusive subscription marketplace connecting companies with vetted developers.
-              Skip the endless interviews. Find top talent instantly.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-4">
-              <Button asChild size="lg" className="rounded-full text-base px-8 h-12">
-                <Link href="/sign-up">
-                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="rounded-full text-base px-8 h-12 bg-white"
-              >
-                <Link href="#pricing">View Pricing</Link>
-              </Button>
-            </div>
-            <div className="mt-16 flex items-center justify-center gap-8 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Vetted developers only</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Smart project matching</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Subscription model</span>
-              </div>
-            </div>
+      {/* Hero Section - Large dramatic Apple style */}
+      <section className="pt-32 pb-20 md:pt-44 md:pb-32">
+        <div className="max-w-[980px] mx-auto px-6 text-center">
+          <h1 className="text-[#1d1d1f] text-5xl md:text-7xl lg:text-[80px] font-semibold tracking-tight leading-[1.05]">
+            Premium talent.
+            <br />
+            <span className="bg-gradient-to-r from-[#2997ff] via-[#5856d6] to-[#af52de] bg-clip-text text-transparent">
+              Instant access.
+            </span>
+          </h1>
+          <p className="mt-6 text-[#86868b] text-xl md:text-2xl max-w-[600px] mx-auto leading-relaxed">
+            The subscription marketplace connecting vetted developers with companies that value quality.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button asChild size="lg" className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-8 h-14 text-lg min-w-[200px]">
+              <Link href="/sign-up">
+                Get started free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full border-[#1d1d1f]/20 text-[#0071e3] hover:bg-[#0071e3]/5 px-8 h-14 text-lg min-w-[200px]">
+              <Link href="#pricing">View pricing</Link>
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 sm:py-32">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
-              Why Choose Hire the Code?
-            </h2>
-            <p className="mt-4 text-lg text-gray-500">
-              The premium way to connect talent with opportunity
-            </p>
-          </div>
-          <div className="mx-auto mt-16 max-w-7xl">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-2xl bg-blue-100 flex items-center justify-center mb-4">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <CardTitle className="text-xl">Vetted Talent Pool</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-500">
-                    Every developer is thoroughly screened for technical skills, communication,
-                    and professionalism. No more sifting through unqualified candidates.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4">
-                    <Zap className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <CardTitle className="text-xl">Smart Matching</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-500">
-                    Our AI-powered system matches projects with developers based on skills,
-                    experience, timezone, and availability. Perfect fits every time.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
-                    <Shield className="h-6 w-6 text-green-600" />
-                  </div>
-                  <CardTitle className="text-xl">Subscription Model</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-500">
-                    No per-hire fees or commission. One subscription gives you unlimited
-                    access to premium talent and project opportunities.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* For Developers Section */}
-      <section className="py-24 sm:py-32 bg-white">
-        <div className="container">
-          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:gap-24 items-center">
-            <div>
-              <Badge className="mb-4 rounded-full bg-blue-100 text-blue-700 border-0">
-                For Developers
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight text-gray-900">
-                Discover Your Next Opportunity
-              </h2>
-              <p className="mt-4 text-lg text-gray-500">
-                Join an exclusive network of premium developers and get matched with
-                high-quality projects.
-              </p>
-              <div className="mt-8 space-y-4">
-                {[
-                  {
-                    title: 'Curated Opportunities',
-                    desc: 'Receive targeted project matches based on your skills',
-                  },
-                  {
-                    title: 'Premium Rates',
-                    desc: 'Companies pay premium rates for vetted talent',
-                  },
-                  {
-                    title: 'Quality Projects',
-                    desc: 'Work with serious companies on meaningful projects',
-                  },
-                ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-4">
-                    <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{item.title}</h3>
-                      <p className="text-gray-500 text-sm">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8">
-                <Button asChild size="lg" className="rounded-full">
-                  <Link href="/sign-up">Join as Developer - $99/month</Link>
-                </Button>
-              </div>
-            </div>
-            <div className="lg:order-first">
-              <div className="aspect-square rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 p-8 text-white shadow-2xl">
-                <h3 className="text-2xl font-semibold mb-6">Developer Profile</h3>
-                <div className="space-y-4">
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="font-medium text-lg">Sarah Chen</div>
-                    <div className="text-white/80">Full-Stack Developer</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="text-sm text-white/80 mb-2">Skills</div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-white/30 rounded-full text-sm">React</span>
-                      <span className="px-3 py-1 bg-white/30 rounded-full text-sm">Node.js</span>
-                      <span className="px-3 py-1 bg-white/30 rounded-full text-sm">Python</span>
-                    </div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Rate</span>
-                      <span className="font-medium">$150/hr</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* For Companies Section */}
-      <section className="py-24 sm:py-32">
-        <div className="container">
-          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:gap-24 items-center">
-            <div>
-              <Badge className="mb-4 rounded-full bg-green-100 text-green-700 border-0">
-                For Companies
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight text-gray-900">
-                Find Your Perfect Developer
-              </h2>
-              <p className="mt-4 text-lg text-gray-500">
-                Access a curated pool of vetted developers and find the perfect match for
-                your projects.
-              </p>
-              <div className="mt-8 space-y-4">
-                {[
-                  {
-                    title: 'Pre-vetted Talent',
-                    desc: 'Every developer has been thoroughly screened',
-                  },
-                  {
-                    title: 'Smart Matching',
-                    desc: 'AI-powered matching for exact skill requirements',
-                  },
-                  {
-                    title: 'No Per-Hire Fees',
-                    desc: 'One subscription, unlimited hiring',
-                  },
-                ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-4">
-                    <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{item.title}</h3>
-                      <p className="text-gray-500 text-sm">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8">
-                <Button asChild size="lg" className="rounded-full">
-                  <Link href="/sign-up">Join as Company - $499/month</Link>
-                </Button>
-              </div>
-            </div>
-            <div>
-              <div className="aspect-square rounded-3xl bg-gradient-to-br from-green-500 to-teal-600 p-8 text-white shadow-2xl">
-                <h3 className="text-2xl font-semibold mb-6">Company Dashboard</h3>
-                <div className="space-y-4">
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="font-medium text-lg">TechCorp Inc.</div>
-                    <div className="text-white/80">5 Active Projects</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="text-sm text-white/80 mb-2">Recent Matches</div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>React Developer</span>
-                        <span className="text-white/80">3 candidates</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Backend Engineer</span>
-                        <span className="text-white/80">5 candidates</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-                    <div className="flex justify-between">
-                      <span className="text-white/80">Applications</span>
-                      <span className="font-medium">12 pending</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 sm:py-32 bg-white">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
-              Simple, Transparent Pricing
-            </h2>
-            <p className="mt-4 text-lg text-gray-500">
-              Choose the plan that&apos;s right for you. No hidden fees.
-            </p>
-          </div>
-          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-8 lg:grid-cols-2">
-            <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <CardTitle className="text-xl">Developers</CardTitle>
-                  <Badge variant="secondary" className="rounded-full">
-                    Popular
-                  </Badge>
-                </div>
-                <div className="mt-4">
-                  <span className="text-5xl font-semibold text-gray-900">$99</span>
-                  <span className="text-gray-500">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  'Access to exclusive project board',
-                  'Smart project matching',
-                  'Direct messaging with companies',
-                  'Rich developer profile',
-                  'Email notifications',
-                ].map((feature) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-600">{feature}</span>
-                  </div>
-                ))}
-                <Button asChild className="w-full mt-6 rounded-full h-12">
-                  <Link href="/sign-up">Get Started</Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-2 border-blue-500 shadow-lg relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-blue-500 text-white rounded-full px-4">Best Value</Badge>
-              </div>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl">Companies</CardTitle>
-                <div className="mt-4">
-                  <span className="text-5xl font-semibold text-gray-900">$499</span>
-                  <span className="text-gray-500">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  'Unlimited project postings',
-                  'Advanced developer search',
-                  'Smart matching algorithm',
-                  'Direct messaging',
-                  'Company profile & branding',
-                  'Priority support',
-                ].map((feature) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-600">{feature}</span>
-                  </div>
-                ))}
-                <Button asChild className="w-full mt-6 rounded-full h-12">
-                  <Link href="/sign-up">Get Started</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-24 sm:py-32">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
-              What Our Users Say
-            </h2>
-          </div>
-          <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-3">
+      {/* Stats Banner */}
+      <section className="py-16 bg-white border-y border-black/5">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              {
-                quote:
-                  'Found my dream developer role within a week. The quality of projects and companies here is unmatched.',
-                name: 'Sarah K.',
-                role: 'React Developer',
-              },
-              {
-                quote:
-                  'We hired 3 amazing developers in our first month. The vetting process really shows - top quality talent only.',
-                name: 'Mark T.',
-                role: 'CTO, TechStart',
-              },
-              {
-                quote:
-                  "The smart matching is incredible. Every project I get matched with is exactly what I'm looking for.",
-                name: 'Alex M.',
-                role: 'Full-Stack Developer',
-              },
-            ].map((testimonial) => (
-              <Card
-                key={testimonial.name}
-                className="bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <CardContent className="pt-6">
-                  <div className="flex mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-600 mb-4">&quot;{testimonial.quote}&quot;</p>
-                  <div className="font-medium text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-500">{testimonial.role}</div>
-                </CardContent>
-              </Card>
+              { value: '2,500+', label: 'Vetted developers' },
+              { value: '500+', label: 'Companies hiring' },
+              { value: '98%', label: 'Match success rate' },
+              { value: '< 48h', label: 'Average time to hire' },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className="text-4xl md:text-5xl font-semibold text-[#1d1d1f]">{stat.value}</div>
+                <div className="mt-2 text-sm text-[#86868b]">{stat.label}</div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-white py-12">
-        <div className="container">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-            <div>
-              <h3 className="font-semibold text-lg mb-4 text-gray-900">Hire the Code</h3>
-              <p className="text-gray-500 text-sm">
-                Premium talent for every project. Connect with vetted developers and quality
-                companies.
-              </p>
+      {/* For Developers Section */}
+      <section id="developers" className="py-24 md:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-sm font-medium mb-6">
+              <Code2 className="h-4 w-4" />
+              For Developers
             </div>
-            <div>
-              <h4 className="font-medium mb-4 text-gray-900">For Developers</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <Link href="/projects" className="text-gray-500 hover:text-gray-900">
-                    Browse Projects
-                  </Link>
-                </div>
-                <div>
-                  <Link href="#pricing" className="text-gray-500 hover:text-gray-900">
-                    Pricing
-                  </Link>
-                </div>
-                <div>
-                  <Link href="/sign-up" className="text-gray-500 hover:text-gray-900">
-                    Join Now
-                  </Link>
+            <h2 className="text-4xl md:text-5xl font-semibold text-[#1d1d1f] tracking-tight">
+              Your skills deserve
+              <br />
+              premium opportunities.
+            </h2>
+            <p className="mt-6 text-xl text-[#86868b] max-w-[600px] mx-auto">
+              Stop competing on price. Join a curated marketplace where quality matters.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                title: 'Curated projects',
+                description: 'Every company is vetted. Every project is real. No more wasted proposals.',
+                icon: '✦',
+              },
+              {
+                title: 'Fair rates',
+                description: 'Companies here understand value. Set your rate and stick to it.',
+                icon: '◆',
+              },
+              {
+                title: 'Smart matching',
+                description: 'Our AI matches you with projects that fit your skills and preferences.',
+                icon: '●',
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="group p-8 rounded-3xl bg-white border border-black/5 hover:border-black/10 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="text-3xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-[#1d1d1f] mb-2">{feature.title}</h3>
+                <p className="text-[#86868b] leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* For Companies Section */}
+      <section id="companies" className="py-24 md:py-32 bg-[#1d1d1f]">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-medium mb-6">
+              <Building2 className="h-4 w-4" />
+              For Companies
+            </div>
+            <h2 className="text-4xl md:text-5xl font-semibold text-white tracking-tight">
+              Hire with confidence.
+              <br />
+              Scale with ease.
+            </h2>
+            <p className="mt-6 text-xl text-white/60 max-w-[600px] mx-auto">
+              Skip the endless interviews. Access pre-vetted talent ready to build.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                title: 'Pre-vetted talent',
+                description: 'Every developer passes technical screening and soft skills assessment.',
+                icon: '◇',
+              },
+              {
+                title: 'No per-hire fees',
+                description: 'One subscription. Unlimited hiring. No commission on contracts.',
+                icon: '▢',
+              },
+              {
+                title: 'Instant results',
+                description: 'Post a project and receive qualified matches within hours.',
+                icon: '△',
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="group p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300"
+              >
+                <div className="text-3xl mb-4 text-white/80">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-white/60 leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 md:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#af52de]/10 text-[#af52de] text-sm font-medium mb-6">
+              <Sparkles className="h-4 w-4" />
+              Simple Pricing
+            </div>
+            <h2 className="text-4xl md:text-5xl font-semibold text-[#1d1d1f] tracking-tight">
+              One price. Full access.
+            </h2>
+            <p className="mt-6 text-xl text-[#86868b] max-w-[600px] mx-auto">
+              No hidden fees. No commission. Just premium access to the marketplace.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-[800px] mx-auto">
+            {/* Developer Plan */}
+            <div className="relative p-8 rounded-3xl bg-white border border-black/10 hover:shadow-xl transition-shadow duration-300">
+              <div className="mb-8">
+                <div className="text-sm font-medium text-[#86868b] mb-2">For Developers</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-semibold text-[#1d1d1f]">$99</span>
+                  <span className="text-[#86868b]">/month</span>
                 </div>
               </div>
+              <div className="space-y-4 mb-8">
+                {[
+                  'Access premium project board',
+                  'AI-powered project matching',
+                  'Direct messaging with companies',
+                  'Professional developer profile',
+                  'Priority in search results',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#34c759]/10 flex items-center justify-center">
+                      <Check className="h-3 w-3 text-[#34c759]" />
+                    </div>
+                    <span className="text-[#1d1d1f]">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <Button asChild className="w-full rounded-full bg-[#1d1d1f] hover:bg-[#1d1d1f]/90 text-white h-12 text-base">
+                <Link href="/sign-up">Start as Developer</Link>
+              </Button>
             </div>
-            <div>
-              <h4 className="font-medium mb-4 text-gray-900">For Companies</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <Link href="/developers" className="text-gray-500 hover:text-gray-900">
-                    Find Developers
-                  </Link>
-                </div>
-                <div>
-                  <Link href="#pricing" className="text-gray-500 hover:text-gray-900">
-                    Pricing
-                  </Link>
-                </div>
-                <div>
-                  <Link href="/sign-up" className="text-gray-500 hover:text-gray-900">
-                    Get Started
-                  </Link>
+
+            {/* Company Plan */}
+            <div className="relative p-8 rounded-3xl bg-gradient-to-b from-[#1d1d1f] to-[#2d2d2f] border border-white/10">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <div className="px-3 py-1 rounded-full bg-[#0071e3] text-white text-xs font-medium">
+                  Most Popular
                 </div>
               </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4 text-gray-900">Support</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <Link href="/help" className="text-gray-500 hover:text-gray-900">
-                    Help Center
-                  </Link>
-                </div>
-                <div>
-                  <Link href="/contact" className="text-gray-500 hover:text-gray-900">
-                    Contact
-                  </Link>
-                </div>
-                <div>
-                  <Link href="/privacy" className="text-gray-500 hover:text-gray-900">
-                    Privacy
-                  </Link>
+              <div className="mb-8">
+                <div className="text-sm font-medium text-white/60 mb-2">For Companies</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl font-semibold text-white">$499</span>
+                  <span className="text-white/60">/month</span>
                 </div>
               </div>
+              <div className="space-y-4 mb-8">
+                {[
+                  'Unlimited project postings',
+                  'Advanced developer search',
+                  'AI-powered candidate matching',
+                  'Direct messaging & hiring',
+                  'Company profile & branding',
+                  'Priority support',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#0071e3]/20 flex items-center justify-center">
+                      <Check className="h-3 w-3 text-[#0071e3]" />
+                    </div>
+                    <span className="text-white">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <Button asChild className="w-full rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white h-12 text-base">
+                <Link href="/sign-up">Start as Company</Link>
+              </Button>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-            <p>&copy; 2024 Hire the Code. All rights reserved.</p>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 md:py-32 bg-gradient-to-b from-[#fbfbfd] to-white">
+        <div className="max-w-[980px] mx-auto px-6 text-center">
+          <h2 className="text-4xl md:text-5xl font-semibold text-[#1d1d1f] tracking-tight mb-6">
+            Ready to get started?
+          </h2>
+          <p className="text-xl text-[#86868b] mb-10 max-w-[500px] mx-auto">
+            Join thousands of developers and companies building the future together.
+          </p>
+          <Button asChild size="lg" className="rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white px-10 h-14 text-lg">
+            <Link href="/sign-up">
+              Create free account
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-white border-t border-black/5">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-sm text-[#86868b]">
+              © 2024 hirethecode. All rights reserved.
+            </div>
+            <div className="flex items-center gap-8 text-sm text-[#86868b]">
+              <Link href="/privacy" className="hover:text-[#1d1d1f] transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-[#1d1d1f] transition-colors">Terms</Link>
+              <Link href="/contact" className="hover:text-[#1d1d1f] transition-colors">Contact</Link>
+            </div>
           </div>
         </div>
       </footer>
