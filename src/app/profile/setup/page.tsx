@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { requireAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
@@ -7,24 +6,17 @@ import { eq } from 'drizzle-orm'
 import { ProfileSetupForm } from '@/components/profile/profile-setup-form'
 
 export default async function ProfileSetupPage() {
-  const session = await getServerSession(authOptions)
+  const user = await requireAuth()
   
-  if (!session?.user?.email) {
-    redirect('/auth/sign-in')
-  }
+  // Check if profile already exists
+  const existingProfile = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1)
 
-  const profile = await db.select()
-  .from(profiles)
-  .where(eq(profiles.id, session.user.id))
-  .limit(1)
-
-  console.log(`PROFILE > SETUP > profile: ${JSON.stringify(profile, null, "  ")}`)
-
-  let name = null;
-  let role = null;
-  if(profile) {
-    name = profile[0].displayName
-    role = profile[0].role
+  if (existingProfile.length > 0) {
+    redirect('/dashboard')
   }
 
   return (
@@ -38,8 +30,8 @@ export default async function ProfileSetupPage() {
         </div>
         
         <ProfileSetupForm 
-          userEmail={session.user.email} 
-          userId={session.user.id} 
+          userEmail={user.email} 
+          userId={user.id} 
           role={role}
           name={name}
         />

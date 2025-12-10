@@ -9,6 +9,7 @@ export default clerkMiddleware({
     "/developers/(.*)",
     "/projects", 
     "/projects/(.*)",
+    "/api/webhooks/clerk",
   ],
 });
 
