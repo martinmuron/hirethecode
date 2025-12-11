@@ -57,7 +57,7 @@ export const profiles = pgTable('profiles', {
 })
 
 export const seekerProfiles = pgTable('seeker_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
   organizationName: text('organization_name'),
   industry: text('industry'),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
@@ -127,7 +127,7 @@ export const developerSkills = pgTable('developer_skills', {
 }))
 
 export const companySkills = pgTable('company_skills', {
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   skillId: bigint('skill_id', { mode: 'number' }).notNull().references(() => skills.id, { onDelete: 'cascade' }),
   importance: text('importance', { 
     enum: ['nice_to_have', 'preferred', 'required'] 
@@ -142,7 +142,7 @@ export const companySkills = pgTable('company_skills', {
 
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
-  companyId: text('company_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  seekerId: text('seeker_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description').notNull(),
   budgetMin: decimal('budget_min', { precision: 10, scale: 2 }),
@@ -151,7 +151,6 @@ export const projects = pgTable('projects', {
   timeline: text('timeline'),
   locationPref: text('location_pref'),
   status: text('status', { enum: ['open', 'in_progress', 'closed'] }).notNull().default('open'),
-  // NEW FIELDS for Claude analysis
   complexity: text('complexity', { enum: ['simple', 'moderate', 'complex', 'enterprise'] }),
   estimatedTimeline: text('estimated_timeline'),
   recommendedFor: text('recommended_for', { enum: ['freelancer', 'company', 'either'] }),
@@ -170,7 +169,7 @@ export const projectSkills = pgTable('project_skills', {
 // Project intake (for smart matching)
 export const projectIntake = pgTable('project_intake', {
   id: uuid('id').defaultRandom().primaryKey(),
-  submittedBy: uuid('submitted_by').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  submittedBy: text('submitted_by').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description').notNull(),
   skills: text('skills').array().notNull(),
@@ -261,7 +260,7 @@ export const companySkillsRelations = relations(companySkills, ({ one }) => ({
 }))
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
-  seeker: one(profiles, { fields: [projects.seekerId], references: [profiles.id] }), // Changed from company
+  seeker: one(profiles, { fields: [projects.seekerId], references: [profiles.id] }),
   projectSkills: many(projectSkills),
   applications: many(projectApplications),
 }))
