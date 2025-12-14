@@ -240,7 +240,7 @@ export function SeekerProjectForm({ user, seekerId }: SeekerProjectFormProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role="seeker" />
+      <DashboardNav role="seeker" />
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">

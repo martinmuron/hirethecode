@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { SignOutButton, useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
 import { User, Settings, LogOut } from 'lucide-react'
 
 interface DashboardNavProps {
@@ -23,8 +25,9 @@ interface DashboardNavProps {
   role: 'developer' | 'company' | 'admin' | 'seeker'
 }
 
-export function DashboardNav({ user, role }: DashboardNavProps) {
+export function DashboardNav({ role }: DashboardNavProps) {
   const pathname = usePathname()
+  const { user } = useUser()
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
@@ -71,9 +74,9 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.image || undefined} alt={user.name || ''} />
+                  <AvatarImage src={user?.imageUrl || undefined} alt={user?.fullName || ''} />
                   <AvatarFallback>
-                    {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                    {user?.fullName?.charAt(0) || user?.emailAddresses?.[0]?.emailAddress?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -81,9 +84,9 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
-                  {user.name && <p className="font-medium">{user.name}</p>}
+                  {user?.fullName && <p className="font-medium">{user?.fullName}</p>}
                   <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {user.email}
+                    {user?.emailAddresses?.[0]?.emailAddress}
                   </p>
                 </div>
               </div>
@@ -101,16 +104,12 @@ export function DashboardNav({ user, role }: DashboardNavProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={(event) => {
-                  event.preventDefault()
-                  signOut()
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
+              <SignOutButton>
+                <DropdownMenuItem className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </SignOutButton>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

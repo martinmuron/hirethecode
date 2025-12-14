@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth/config'
-import { getServerSession } from 'next-auth/next'
 import { db } from '@/lib/db'
 import { headers, cookies } from "next/headers"
 import {
@@ -12,22 +10,21 @@ export async function GET() {
   try {
     const headersList = await headers()
     const cookieStore = await cookies()
-    const session = await getServerSession(authOptions)
-    console.log("Session result:", session)
+    const user = await currentUser()
 
-    if (!session) {
+    if (!user) {
       console.log('❌ No session in admin stats')
       return NextResponse.json({ error: 'No session' }, { status: 401 })
     }
 
     const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, session.user.id as string),
+      where: eq(profiles.id, user.id as string),
     })
 
     // console.log('Found admin profile:', adminProfile)
 
     if (!adminProfile) {
-      console.log('❌ No profile found for user:', session.user.id)
+      console.log('❌ No profile found for user:', user.id)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 

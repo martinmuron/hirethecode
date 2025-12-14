@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { getDb } from '@/lib/db'
 import {
   profiles, developerProfiles, users, developerSkills, skills
@@ -10,15 +8,15 @@ import { eq, and, desc, count, sql } from 'drizzle-orm'
 export async function GET(request: NextRequest) {
   try {
     const db = getDb()
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
+    const user = await currentUser()
+
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if user is admin
     const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, session.user.id as string),
+      where: eq(profiles.id, user.id as string),
     })
 
     // console.log(`admin? ${JSON.stringify(adminProfile, null, "  ")}`)
@@ -55,13 +53,6 @@ export async function GET(request: NextRequest) {
         timezone: profiles.timezone,
         profileCreatedAt: profiles.createdAt,
         
-        // User info
-        userId: users.id,
-        userName: users.name,
-        userEmail: users.email,
-        userImage: users.image,
-        userCreatedAt: users.createdAt,
-        
         // Developer profile info
         headline: developerProfiles.headline,
         bio: developerProfiles.bio,
@@ -74,7 +65,6 @@ export async function GET(request: NextRequest) {
         country: developerProfiles.country,
       })
       .from(profiles)
-      .innerJoin(users, eq(profiles.id, users.id))
       .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
       .where(whereConditions)
       .orderBy(desc(profiles.createdAt))
@@ -130,15 +120,15 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const db = getDb()
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if user is admin
     const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, session.user.id as string),
+      where: eq(profiles.id, user.id as string),
     })
 
     if (adminProfile?.role !== 'admin') {

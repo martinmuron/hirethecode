@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { signIn, getSession } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { currentUser } from '@clerk/nextjs/server'  
+import { useUser, SignOutButton, SignIn } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,9 +43,9 @@ export function SignInForm() {
       if (result?.error) {
         setError('Invalid email or password. Take a walk for an hour or so, then come back and try again.')
       } else if(result?.ok) {
-        const session = await getSession()
+        const user = await currentUser()
 
-        if(session) {
+        if(user) {
           router.push('/dashboard')
         }
       }
@@ -167,20 +168,10 @@ export function SignInForm() {
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <Button
-            variant="outline"
-            onClick={() => handleOAuthSignIn('github')}
-            disabled={isLoading}
-          >
-            GitHub
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleOAuthSignIn('google')}
-            disabled={isLoading}
-          >
-            Google
-          </Button>
+          <SignIn 
+            redirectUrl="/dashboard"
+            routing="hash" 
+          />
         </div>
 
         <div className="text-center text-sm text-muted-foreground">

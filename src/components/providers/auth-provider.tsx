@@ -7,8 +7,9 @@ function UserSync() {
   const { user, isLoaded } = useUser()
 
   useEffect(() => {
+    console.log('UserSync: isLoaded =', isLoaded, 'user =', user?.id) // Debug log
     if (isLoaded && user) {
-      // Sync user to our database
+      console.log('UserSync: Attempting to sync user', user.id) // Debug log
       fetch('/api/sync-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -18,7 +19,12 @@ function UserSync() {
           name: user.fullName,
           image: user.imageUrl,
         })
-      }).catch(console.error)
+      }).then(res => {
+          console.log('UserSync: API response status:', res.status)
+          return res.text()
+      })
+        .then(data => console.log('UserSync: API response:', data))
+        .catch(err => console.error('User Sync: API error:', err))
     }
   }, [user, isLoaded])
 

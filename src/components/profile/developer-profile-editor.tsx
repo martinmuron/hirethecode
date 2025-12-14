@@ -361,7 +361,7 @@ export function DeveloperProfileEditor({
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
+      <DashboardNav role={profile.role as 'developer' | 'company' | 'admin'} />
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">

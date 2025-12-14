@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles, notifications, projects } from '@/lib/db/schema'
@@ -11,19 +10,23 @@ import { SeekerDashboard } from '@/components/dashboard/seeker-dashboard'
 import { SubscriptionRequired } from '@/components/dashboard/subscription-required'
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
+  // const { userId } = auth()
+  const user = await currentUser()
+  const id = user?.id
+
+  console.log(`Dashboard: userId -> ${id}`)
   
-  if (!session?.user?.email) {
+  if (!id) {
+    console.log('Dashboard: No userId, redirecting to sign-in')
     redirect('/auth/sign-in')
   }
 
   // Get user profile from database
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, id))
     .limit(1)
 
-  // If no profile exists, redirect to profile creation
   if (!userProfile.length) {
     redirect('/profile/setup')
   }
@@ -33,7 +36,7 @@ export default async function DashboardPage() {
   const unreadCount = await db.select({ count: sql<number>`count(*)` })
     .from(notifications)
     .where(and(
-      eq(notifications.userId, session.user.id),
+      eq(notifications.userId, id),
       eq(notifications.isRead, false)
     ))
 
@@ -45,12 +48,14 @@ export default async function DashboardPage() {
     return <SubscriptionRequired role={profile.role} />
   }
 
+  const constructedUser = { id: id }
+
   switch (profile.role) {
     case 'developer':
       return (
         <DeveloperDashboard 
           profile={profile} 
-          user={session.user}
+          user={constructedUser}
           unreadNotificationCount={unreadCount}
         />
       )
@@ -60,17 +65,16 @@ export default async function DashboardPage() {
       const activeProjects = await db.select({ count: sql<number>`count(*)` })
         .from(projects)
         .where(and(
-          eq(projects.seekerId, session.user.id),
+          eq(projects.seekerId, id),
           eq(projects.status, 'open')
         ))
 
-      // Get total applications count (you'll need to implement this based on your applications schema)
       const totalApplications = 0 // TODO: Implement when you have project applications
 
       return (
         <SeekerDashboard 
           profile={profile} 
-          user={session.user}
+          user={constructedUser}
           unreadNotificationCount={unreadCount}
           activeProjects={activeProjects[0]?.count || 0}
           totalApplications={totalApplications}
@@ -78,8 +82,6 @@ export default async function DashboardPage() {
       )
 
     case 'company':
-      // Return your existing company dashboard
-      // return <CompanyDashboard ... />
       return <div>Company Dashboard (TODO)</div>
 
     case 'admin':

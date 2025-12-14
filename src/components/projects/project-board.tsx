@@ -201,7 +201,7 @@ export function ProjectBoard({ user, userRole, userId }: ProjectBoardProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={userRole} />
+      <DashboardNav role={userRole} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config' // Make sure this path is correct
+import { currentUser } from '@clerk/nextjs/server'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('Testing auth...')
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    console.log('Session result:', session)
+    console.log('User result:', user)
     console.log('Request headers:', Object.fromEntries(request.headers.entries()))
     
     return NextResponse.json({ 
-      session,
-      hasSession: !!session,
+      user,
+      hasUser: !!user,
       cookies: request.headers.get('cookie'),
     })
   } catch (error) {

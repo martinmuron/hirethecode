@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { SubscriptionService } from '@/lib/stripe/subscription'
 import { StripePlan, StripeBillingInterval } from '@/lib/stripe/config'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -33,11 +32,11 @@ export async function POST(req: NextRequest) {
     }
 
     const checkoutSession = await SubscriptionService.createCheckoutSession(
-      session.user.id,
-      session.user.email,
+      user.id,
+      user.emailAddresses[0]?.emailAddress,
       plan as StripePlan,
       billingInterval as StripeBillingInterval,
-      session.user.name || undefined
+      user.fullName || 'Justin Greenough'
     )
 
     return NextResponse.json({ 

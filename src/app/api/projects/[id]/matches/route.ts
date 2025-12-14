@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { 
   projects, 
@@ -30,9 +29,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -55,7 +54,7 @@ export async function GET(
     }
 
     // Verify user is the project owner (seeker)
-    if (project[0].seekerId !== session.user.id) {
+    if (project[0].seekerId !== user.id) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }

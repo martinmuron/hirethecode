@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { 
   profiles, 
@@ -13,16 +11,16 @@ import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Verify user is a company
     const userProfile = await db.select()
       .from(profiles)
-      .where(eq(profiles.id, session.user.id))
+      .where(eq(profiles.id, user.id))
       .limit(1)
 
     const adminAndCompany = new Set(['admin', 'company'])
@@ -88,7 +86,6 @@ export async function GET(request: NextRequest) {
       developerProfile: developerProfiles,
     })
       .from(profiles)
-      .innerJoin(users, eq(profiles.id, users.id))
       .leftJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
       .where(and(...conditions))
       .orderBy(orderByClause)

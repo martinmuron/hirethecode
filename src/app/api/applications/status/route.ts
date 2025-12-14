@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { projectApplications, profiles, projects, companyProfiles } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -8,16 +6,16 @@ import { NotificationService } from '@/lib/services/notifications'
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user profile
     const userProfile = await db.select()
       .from(profiles)
-      .where(eq(profiles.id, session.user.id))
+      .where(eq(profiles.id, user.id))
       .limit(1)
 
     if (!userProfile.length || userProfile[0].role !== 'company') {

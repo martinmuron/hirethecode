@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
+import { currentUser } from '@clerk/nextjs/server'
 import { 
   projects, 
   profiles,
@@ -27,9 +26,9 @@ interface CreateProjectRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Verify user is a seeker
     const userProfile = await db.select()
       .from(profiles)
-      .where(eq(profiles.id, session.user.id))
+      .where(eq(profiles.id, user.id))
       .limit(1)
 
     if (!userProfile.length) {
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
     // Create the project
     const newProject = await db.insert(projects)
       .values({
-        seekerId: session.user.id, // UPDATED: seekerId instead of companyId
+        seekerId: user.id, // UPDATED: seekerId instead of companyId
         title: title.trim(),
         description: description.trim(),
         budgetMin: budgetMin || null,

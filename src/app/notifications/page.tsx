@@ -1,6 +1,4 @@
-// src/app/notifications/page.tsx
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles, notifications } from '@/lib/db/schema'
@@ -9,16 +7,16 @@ import { NotificationsPage } from '@/components/notifications/notifications-page
 import { formatDistanceToNow } from 'date-fns'
 
 export default async function NotificationsPageRoute() {
-  const session = await getServerSession(authOptions)
+  const user = await currentUser()
 
-  if (!session?.user?.email) {
+  if (!user?.email) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, user.id))
     .limit(1)
 
   if (!userProfile.length) {
@@ -28,7 +26,7 @@ export default async function NotificationsPageRoute() {
   // Get notifications
   const userNotifications = await db.select()
     .from(notifications)
-    .where(eq(notifications.userId, session.user.id))
+    .where(eq(notifications.userId, user.id))
     .orderBy(desc(notifications.createdAt))
     .limit(50)
 
@@ -40,7 +38,7 @@ export default async function NotificationsPageRoute() {
 
   return (
     <NotificationsPage
-      user={session.user}
+      user={user}
       role={userProfile[0].role as 'developer' | 'company' | 'admin'}
       notifications={notificationsWithTimeAgo}
     />

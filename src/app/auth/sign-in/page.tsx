@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Sign in to your Hire the Code account',
 }
 
-export default funciotn SignInPage() {
+export default function SignInPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <SignIn />

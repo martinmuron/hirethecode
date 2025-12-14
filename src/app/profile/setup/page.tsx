@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { currentUser } from '@clerk/nextjs/server' // Use currentUser directly
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
@@ -6,7 +6,11 @@ import { eq } from 'drizzle-orm'
 import { ProfileSetupForm } from '@/components/profile/profile-setup-form'
 
 export default async function ProfileSetupPage() {
-  const user = await requireAuth()
+  const user = await currentUser()
+
+  if(!user) {
+    redirect('/auth/sign-in')
+  }
   
   // Check if profile already exists
   const existingProfile = await db
@@ -30,10 +34,9 @@ export default async function ProfileSetupPage() {
         </div>
         
         <ProfileSetupForm 
-          userEmail={user.email} 
+          userEmail={user.emailAddresses[0]?.emailAddress || ''} 
           userId={user.id} 
-          role={role}
-          name={name}
+          name={user.fullName || ''}
         />
       </div>
     </div>

@@ -197,12 +197,7 @@ export function DevelopersPage({ adminProfile, user, status }) {
   if (loading && pagination.page === 1) {
     return (
       <div className="min-h-screen bg-background">
-        <DashboardNav user={{ 
-          name: adminProfile.displayName, 
-          email: user.email, 
-          role: adminProfile.role 
-        }} 
-          role="admin" />
+        <DashboardNav role="admin" />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Loading developers...</div>

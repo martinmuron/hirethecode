@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { EmailService } from '@/lib/email/email-service'
 
 export async function POST(req: NextRequest) {
@@ -10,9 +8,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
     }
 
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -22,13 +20,13 @@ export async function POST(req: NextRequest) {
 
     switch (type) {
       case 'test':
-        result = await EmailService.sendTestEmail(session.user.email)
+        result = await EmailService.sendTestEmail(user.email)
         break
 
       case 'application_accepted':
         result = await EmailService.sendApplicationStatusEmail(
-          session.user.email,
-          session.user.name || 'John Doe',
+          user.emailAddresses[0]?.emailAddress,
+          user.fullName || 'Justin Greenough',
           'Full-Stack React Developer Position',
           'TechCorp Inc.',
           'accepted',
@@ -38,8 +36,8 @@ export async function POST(req: NextRequest) {
 
       case 'application_rejected':
         result = await EmailService.sendApplicationStatusEmail(
-          session.user.email,
-          session.user.name || 'John Doe',
+          user.emailAddresses[0]?.emailAddress,
+          user.fullName || 'John Doe',
           'Senior Backend Engineer Role',
           'StartupXYZ',
           'rejected',
@@ -49,8 +47,8 @@ export async function POST(req: NextRequest) {
 
       case 'new_message':
         result = await EmailService.sendNewMessageEmail(
-          session.user.email,
-          session.user.name || 'Jane Smith',
+          user.emailAddresses[0]?.emailAddress,
+          user.fullName || 'Jane Smith',
           'Alex Thompson',
           'company',
           'Hi! I saw your profile and I\'m really impressed with your work. We have an exciting project that would be perfect for your skills. Would you be interested in discussing this opportunity?',
@@ -60,16 +58,16 @@ export async function POST(req: NextRequest) {
 
       case 'welcome_developer':
         result = await EmailService.sendWelcomeDeveloperEmail(
-          session.user.email,
-          session.user.name || 'John Doe',
-          session.user.id
+          user.emailAddresses[0]?.emailAddress,
+          user.fullName || 'John Doe',
+          user.id
         )
         break
 
       case 'subscription_confirmation':
         result = await EmailService.sendSubscriptionConfirmationEmail(
-          session.user.email,
-          session.user.name || 'John Doe',
+          user.emailAddresses[0]?.emailAddress,
+          user.fullName || 'John Doe',
           'Developer Pro',
           '$99',
           'monthly'
@@ -83,7 +81,7 @@ export async function POST(req: NextRequest) {
     if (result) {
       return NextResponse.json({ 
         success: true,
-        message: `${type} email sent successfully to ${session.user.email}` 
+        message: `${type} email sent successfully to ${user.emailAddresses[0]?.emailAddress}` 
       })
     } else {
       return NextResponse.json({ 

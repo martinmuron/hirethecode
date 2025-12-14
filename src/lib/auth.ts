@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles, subscriptions } from '@/lib/db/schema'
@@ -6,8 +6,17 @@ import { eq } from 'drizzle-orm'
 import type { Profile, Subscription } from '@/lib/db/schema'
 
 export async function getUser() {
-  const { userId } = auth()
-  return userId ? { id: userId } : null
+  try {
+    const { userId } = auth()
+    const user = await currentUser()
+    console.log('getUser: auth().userId =', userId, 'currentUser =', user?.id) // Debug
+
+    const id = user?.id || userId
+    return id ? { id } : null
+  } catch(err) {
+    console.error('getUser error:', error)
+    return null
+  }
 }
 
 export async function getUserProfile(): Promise<Profile | null> {

@@ -27,7 +27,7 @@ export function SeekerDashboard({
 }: SeekerDashboardProps) {
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin' | 'seeker'} />
+      <DashboardNav role={profile.role as 'developer' | 'company' | 'admin' | 'seeker'} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect, notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { 
@@ -18,16 +17,16 @@ interface EditProjectPageProps {
 }
 
 export default async function EditProjectPage({ params }: EditProjectPageProps) {
-  const session = await getServerSession(authOptions)
+  const user = await currentUser()
 
-  if (!session?.user?.email) {
+  if (!user?.email) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, user.id))
     .limit(1)
 
   if (!userProfile.length) {
@@ -64,7 +63,7 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
 
   return (
     <ProjectEditForm 
-      user={session.user} 
+      user={user} 
       companyId={profile.id}
       project={{ 
         ...projectData[0], 

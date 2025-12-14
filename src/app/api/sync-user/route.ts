@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+// import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth()
+  const { id, email, name, image } = await req.json()
+  // const { userId } = auth()
   
+  console.log('sync-user: received data:', { id, email, name }) // Debug
+
+  /*
   if (!userId) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   const { id, email, name, image } = await req.json()
+  */
 
   try {
     // Check if profile already exists
@@ -22,14 +27,16 @@ export async function POST(req: NextRequest) {
       .limit(1)
 
     if (!existing.length) {
-      // Create new profile
+      console.log('sync-user: creating profile for:', id) // Debug
       await db.insert(profiles).values({
         id: id,
         role: 'developer', // Default - user can change in setup
         displayName: name || email,
         avatarUrl: image,
       })
-      console.log('Created profile for user:', id)
+      console.log('sync-user: profile created successfully') // Debug
+    } else {
+      console.log('sync-user: profile already exists') // Debug
     }
 
     return new NextResponse('OK', { status: 200 })

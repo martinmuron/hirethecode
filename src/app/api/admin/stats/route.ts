@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import {
   profiles, developerProfiles, users, projects, subscriptions, companyProfiles
@@ -9,19 +7,19 @@ import { eq, and, count, sql, or, gte } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session) {
+    if (!user) {
       console.log('❌ No session in admin stats')
       return NextResponse.json({ error: 'No session' }, { status: 401 })
     }
 
     const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, session.user.id as string),
+      where: eq(profiles.id, user.id as string),
     })
 
     if (!adminProfile) {
-      console.log('❌ No profile found for user:', session.user.id)
+      console.log('❌ No profile found for user:', user.id)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { SubscriptionService } from '@/lib/stripe/subscription'
 import { db } from '@/lib/db'
 import { subscriptions } from '@/lib/db/schema'
@@ -8,16 +7,16 @@ import { eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user's subscription to find customer ID
     const userSubscription = await db.select()
       .from(subscriptions)
-      .where(eq(subscriptions.userId, session.user.id))
+      .where(eq(subscriptions.userId, user.id))
       .limit(1)
 
     if (!userSubscription.length) {

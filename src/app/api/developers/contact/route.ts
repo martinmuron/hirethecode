@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { developerContacts, profiles } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Verify user is a company
     const userProfile = await db.select()
       .from(profiles)
-      .where(eq(profiles.id, session.user.id))
+      .where(eq(profiles.id, user.id))
       .limit(1)
 
     if (!userProfile.length || userProfile[0].role !== 'company') {
@@ -44,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Create contact record
     await db.insert(developerContacts).values({
-      companyId: session.user.id,
+      companyId: user.id,
       developerId,
       message: message.trim(),
       status: 'sent',

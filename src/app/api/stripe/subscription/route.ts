@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { SubscriptionService } from '@/lib/stripe/subscription'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const subscription = await SubscriptionService.getSubscriptionStatus(session.user.id)
+    const subscription = await SubscriptionService.getSubscriptionStatus(user.id)
 
     if (!subscription) {
       return NextResponse.json({ 
@@ -43,13 +42,13 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await SubscriptionService.cancelSubscription(session.user.id)
+    await SubscriptionService.cancelSubscription(user.id)
 
     return NextResponse.json({ 
       success: true,
@@ -67,13 +66,13 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await SubscriptionService.reactivateSubscription(session.user.id)
+    await SubscriptionService.reactivateSubscription(user.id)
 
     return NextResponse.json({ 
       success: true,

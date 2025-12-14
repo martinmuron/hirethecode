@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { 
   projects, 
@@ -19,9 +18,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -42,7 +41,7 @@ export async function POST(
     // Get user profile
     const userProfile = await db.select()
       .from(profiles)
-      .where(eq(profiles.id, session.user.id))
+      .where(eq(profiles.id, user.id))
       .limit(1)
 
     if (!userProfile.length) {
@@ -84,7 +83,7 @@ export async function POST(
     }
 
     // Check if user is project owner (seekers can't apply to their own projects)
-    if (project[0].seekerId === session.user.id) {
+    if (project[0].seekerId === user.id) {
       return NextResponse.json(
         { error: 'You cannot apply to your own project' },
         { status: 400 }
@@ -96,7 +95,7 @@ export async function POST(
       .from(projectApplications)
       .where(and(
         eq(projectApplications.projectId, projectId),
-        eq(projectApplications.developerId, session.user.id) // NOTE: Using developerId for both developers and companies
+        eq(projectApplications.developerId, user.id) // NOTE: Using developerId for both developers and companies
       ))
       .limit(1)
 
@@ -111,7 +110,7 @@ export async function POST(
     const newApplication = await db.insert(projectApplications)
       .values({
         projectId,
-        developerId: session.user.id, // NOTE: developerId represents any applicant (dev or company)
+        developerId: user.id, // NOTE: developerId represents any applicant (dev or company)
         message: message.trim(),
         status: 'pending'
       })
@@ -131,7 +130,7 @@ export async function POST(
           type: 'application_status',
           data: {
             projectId: project[0].id,
-            applicantId: session.user.id,
+            applicantId: user.id,
             applicantType: applicant.role,
             applicationId: newApplication[0].id
           }
@@ -164,9 +163,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -180,7 +179,7 @@ export async function GET(
       .from(projects)
       .where(and(
         eq(projects.id, projectId),
-        eq(projects.seekerId, session.user.id)
+        eq(projects.seekerId, user.id)
       ))
       .limit(1)
 

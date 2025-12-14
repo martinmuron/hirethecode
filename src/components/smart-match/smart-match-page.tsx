@@ -79,7 +79,7 @@ export function SmartMatchPage({ profile, user }: SmartMatchPageProps) {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
+        <DashboardNav role={profile.role as 'developer' | 'company' | 'admin'} />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -95,7 +95,7 @@ export function SmartMatchPage({ profile, user }: SmartMatchPageProps) {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
+        <DashboardNav role={profile.role as 'developer' | 'company' | 'admin'} />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Smart Match</h1>
@@ -116,7 +116,7 @@ export function SmartMatchPage({ profile, user }: SmartMatchPageProps) {
   if (matchData?.message) {
     return (
       <div className="min-h-screen bg-background">
-        <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
+        <DashboardNav role={profile.role as 'developer' | 'company' | 'admin'} />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Smart Match</h1>
@@ -138,7 +138,7 @@ export function SmartMatchPage({ profile, user }: SmartMatchPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav user={user} role={profile.role as 'developer' | 'company' | 'admin'} />
+      <DashboardNav role={profile.role as 'developer' | 'company' | 'admin'} />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

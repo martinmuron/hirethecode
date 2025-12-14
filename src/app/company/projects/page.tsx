@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles, projects, projectApplications, users, developerProfiles } from '@/lib/db/schema'
@@ -7,16 +6,16 @@ import { eq, and, desc } from 'drizzle-orm'
 import { ProjectManagementDashboard } from '@/components/company/project-management-dashboard'
 
 export default async function CompanyProjectsPage() {
-  const session = await getServerSession(authOptions)
+  const user = await currentUser()
   
-  if (!session?.user?.email) {
+  if (!user?.email) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, user.id))
     .limit(1)
 
   if (!userProfile.length) {
@@ -70,7 +69,6 @@ export default async function CompanyProjectsPage() {
   })
     .from(projectApplications)
     .innerJoin(profiles, eq(projectApplications.developerId, profiles.id))
-    .innerJoin(users, eq(profiles.id, users.id))
     .leftJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
     .where(eq(profiles.role, 'developer'))
     .orderBy(desc(projectApplications.createdAt)) : []
@@ -87,7 +85,7 @@ export default async function CompanyProjectsPage() {
 
   return (
     <ProjectManagementDashboard 
-      user={session.user}
+      user={user}
       projects={projectsWithApplications}
       companyId={profile.id}
     />

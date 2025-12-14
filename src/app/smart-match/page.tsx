@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
@@ -7,16 +6,16 @@ import { eq } from 'drizzle-orm'
 import { SmartMatchPage } from '@/components/smart-match/smart-match-page'
 
 export default async function SmartMatch() {
-  const session = await getServerSession(authOptions)
+  const user = await currentUser()
 
-  if (!session?.user?.email) {
+  if (!user?.email) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile from database
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, user.id))
     .limit(1)
 
   // If no profile exists, redirect to profile creation
@@ -31,5 +30,5 @@ export default async function SmartMatch() {
     redirect('/dashboard')
   }
 
-  return <SmartMatchPage profile={profile} user={session.user} />
+  return <SmartMatchPage profile={profile} user={user} />
 }

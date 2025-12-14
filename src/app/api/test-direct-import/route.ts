@@ -1,13 +1,10 @@
-import { getServerSession } from 'next-auth/next'
+import { currentUser } from '@clerk/nextjs/server'
 
-// Try importing directly instead of via alias
-import { authOptions } from '../../../../src/lib/auth/config'
-// OR try: import { authOptions } from '../../../../src/lib/auth/config'
 
 export async function GET() {
   console.log('=== DIRECT IMPORT TEST ===')
-  const session = await getServerSession(authOptions)
-  console.log('Direct import session:', session)
+  const user = await currentUser()
+  console.log('Direct import user:', user)
   
-  return Response.json({ hasSession: !!session, session })
+  return Response.json({ hasUser: !!user, user })
 }
