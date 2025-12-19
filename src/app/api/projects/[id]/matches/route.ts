@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { db } from '@/lib/db'
-import { 
-  projects, 
-  projectSkills, 
-  skills,
-  profiles,
-  developerProfiles,
-  developerSkills,
-  companyProfiles,
-  companySkills
-} from '@/lib/db/schema'
-import { eq, and, inArray, sql } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 interface MatchResult {
   type: 'developer' | 'company'
@@ -31,7 +20,7 @@ export async function GET(
   try {
     const user = await currentUser()
 
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -41,12 +30,9 @@ export async function GET(
     const projectId = params.id
 
     // Get project details and verify ownership
-    const project = await db.select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1)
+    const project = await db.projects.findById(projectId)
 
-    if (!project.length) {
+    if (!project) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
@@ -54,7 +40,7 @@ export async function GET(
     }
 
     // Verify user is the project owner (seeker)
-    if (project[0].seekerId !== user.id) {
+    if (project.seekerId !== user.id) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -62,24 +48,17 @@ export async function GET(
     }
 
     // Get project skills
-    const projectSkillsData = await db
-      .select({
-        skillId: projectSkills.skillId,
-        skillLabel: skills.label,
-      })
-      .from(projectSkills)
-      .innerJoin(skills, eq(projectSkills.skillId, skills.id))
-      .where(eq(projectSkills.projectId, projectId))
+    const projectSkills = await db.projects.findProjectSkills(projectId)
 
-    if (!projectSkillsData.length) {
+    if (!projectSkills) {
       return NextResponse.json({
         matches: [],
         message: 'No skills defined for this project'
       })
     }
 
-    const projectSkillIds = projectSkillsData.map(s => s.skillId)
-    const projectSkillLabels = projectSkillsData.map(s => s.skillLabel)
+    const projectSkillIds = projectSkills.map(s => s.skillId)
+    const projectSkillLabels = projectSkills.map(s => s.skill.label)
 
     // Find matching developers
     const developerMatches = await findDeveloperMatches(projectSkillIds, projectSkillLabels)
@@ -95,8 +74,8 @@ export async function GET(
 
     return NextResponse.json({
       project: {
-        id: project[0].id,
-        title: project[0].title,
+        id: project.id,
+        title: project.title,
         requiredSkills: projectSkillLabels,
       },
       matches: allMatches,
@@ -118,45 +97,14 @@ export async function GET(
 }
 
 async function findDeveloperMatches(projectSkillIds: number[], projectSkillLabels: string[]): Promise<MatchResult[]> {
-  // Get developers with matching skills
-  const developersWithSkills = await db
-    .select({
-      userId: developerSkills.userId,
-      skillId: developerSkills.skillId,
-      skillLabel: skills.label,
-      skillLevel: developerSkills.level,
-      displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
-      headline: developerProfiles.headline,
-      rate: developerProfiles.rate,
-      availability: developerProfiles.availability,
-      approved: developerProfiles.approved,
-      country: developerProfiles.country,
-    })
-    .from(developerSkills)
-    .innerJoin(skills, eq(developerSkills.skillId, skills.id))
-    .innerJoin(profiles, eq(developerSkills.userId, profiles.id))
-    .innerJoin(developerProfiles, eq(developerSkills.userId, developerProfiles.userId))
-    .where(
-      and(
-        inArray(developerSkills.skillId, projectSkillIds),
-        eq(profiles.role, 'developer'),
-        eq(developerProfiles.approved, 'approved') // Only approved developers
-      )
-    )
+  const developersWithSkills = await db.developerProfiles.findMatchingDevelopers(projectSkillIds)
 
   // Group by developer and calculate match scores
   const developerMatchMap = new Map<string, MatchResult>()
 
   for (const dev of developersWithSkills) {
     if (!developerMatchMap.has(dev.userId)) {
-      // Get total skills for this developer
-      const totalSkillsResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(developerSkills)
-        .where(eq(developerSkills.userId, dev.userId))
-
-      const totalSkills = totalSkillsResult[0]?.count || 0
+      const totalSkills = await db.developerProfiles.getTotalSkillsCount(dev.userId)
 
       developerMatchMap.set(dev.userId, {
         type: 'developer',
@@ -202,46 +150,13 @@ async function findDeveloperMatches(projectSkillIds: number[], projectSkillLabel
 }
 
 async function findCompanyMatches(projectSkillIds: number[], projectSkillLabels: string[]): Promise<MatchResult[]> {
-  // Get companies with matching skills
-  const companiesWithSkills = await db
-    .select({
-      userId: companySkills.userId,
-      skillId: companySkills.skillId,
-      skillLabel: skills.label,
-      skillImportance: companySkills.importance,
-      displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
-      companyName: companyProfiles.companyName,
-      about: companyProfiles.about,
-      actualTeamSize: companyProfiles.actualTeamSize,
-      hourlyRateMin: companyProfiles.hourlyRateMin,
-      hourlyRateMax: companyProfiles.hourlyRateMax,
-      currentCapacity: companyProfiles.currentCapacity,
-      maxProjects: companyProfiles.maxProjects,
-    })
-    .from(companySkills)
-    .innerJoin(skills, eq(companySkills.skillId, skills.id))
-    .innerJoin(profiles, eq(companySkills.userId, profiles.id))
-    .innerJoin(companyProfiles, eq(companySkills.userId, companyProfiles.userId))
-    .where(
-      and(
-        inArray(companySkills.skillId, projectSkillIds),
-        eq(profiles.role, 'company')
-      )
-    )
+  const companiesWithSkills = await db.companyProfiles.findMatchingCompanies(projectSkillIds)
 
-  // Group by company and calculate match scores
   const companyMatchMap = new Map<string, MatchResult>()
 
   for (const comp of companiesWithSkills) {
     if (!companyMatchMap.has(comp.userId)) {
-      // Get total skills for this company
-      const totalSkillsResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(companySkills)
-        .where(eq(companySkills.userId, comp.userId))
-
-      const totalSkills = totalSkillsResult[0]?.count || 0
+      const totalSkills = await db.companyProfiles.getTotalSkillsCount(comp.userId)
 
       companyMatchMap.set(comp.userId, {
         type: 'company',

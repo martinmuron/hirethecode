@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,13 +12,9 @@ export async function POST(req: NextRequest) {
     const { role, displayName } = await req.json()
 
     // Check if profile already exists
-    const existing = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
-
-    if (!existing.length) {
-      await db.insert(profiles).values({
+    const existing = await db.profiles.findByUserId(user.id)
+    if(!existing) {
+      db.profiles.create({
         id: user.id,
         role,
         displayName: displayName || user.fullName || user.emailAddresses[0]?.emailAddress,

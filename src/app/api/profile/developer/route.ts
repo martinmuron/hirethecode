@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { profiles, developerProfiles, developerSkills, skills } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/lib/database'
 
 export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
     
-    if (!user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -26,60 +25,27 @@ export async function POST(request: NextRequest) {
 
     const userId = user.id
 
-    // Update profile
-    await db.update(profiles)
-      .set({
-        displayName: displayName || null,
-      })
-      .where(eq(profiles.id, userId))
+    await db.profiles.update(userId, {
+      displayName: displayName || null,
+    })
 
-    // Update or create developer profile
-    await db.insert(developerProfiles).values({
+    await db.developerProfiles.upsert(userId, {
       userId,
       headline: headline || null,
       bio: bio || null,
-      rate: rate ? rate.toString() : null,
+      rate: rate ? parseFloat(rate) : null,
       availability: availability || 'available',
+      approved: 'pending', // Keep existing approval status or set default
       portfolioUrl: portfolioUrl || null,
       githubUrl: githubUrl || null,
       websiteUrl: websiteUrl || null,
       country: country || null,
-    }).onConflictDoUpdate({
-      target: developerProfiles.userId,
-      set: {
-        headline: headline || null,
-        bio: bio || null,
-        rate: rate ? rate.toString() : null,
-        availability: availability || 'available',
-        portfolioUrl: portfolioUrl || null,
-        githubUrl: githubUrl || null,
-        websiteUrl: websiteUrl || null,
-        country: country || null,
-      }
     })
 
-    // Handle skills
     if (userSkills && Array.isArray(userSkills)) {
-      // Remove existing skills
-      await db.delete(developerSkills)
-        .where(eq(developerSkills.userId, userId))
-
-      // Add new skills
-      for (const userSkill of userSkills) {
-        // Ensure skill exists in skills table
-        const existingSkill = await db.select()
-          .from(skills)
-          .where(eq(skills.id, userSkill.skillId))
-          .limit(1)
-
-        if (existingSkill.length > 0) {
-          await db.insert(developerSkills).values({
-            userId,
-            skillId: userSkill.skillId,
-            level: userSkill.level,
-          })
-        }
-      }
+      console.log('Updating developer skills:', userSkills)
+      
+      await db.developerSkills.replaceAllForUser(userId, userSkills)
     }
 
     return NextResponse.json({ success: true })

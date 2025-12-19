@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { db } from '@/lib/db'
-import { 
-  profiles, 
-  projects, 
-  projectSkills, 
-  developerSkills, 
-  skills, 
-  developerProfiles 
-} from '@/lib/db/schema'
-import { eq, and, inArray, sql } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>
@@ -20,53 +11,31 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
     const { id } = await params
     const user = await currentUser()
     
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user profile
-    const userProfile = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
+    const userProfile = await db.profiles.findByUserId(user.id)
 
     const adminAndCompany = new Set(['admin', 'company'])
-    if (!userProfile.length || !adminAndCompany.has(userProfile[0].role)) {
+    if (!userProfile || !adminAndCompany.has(userProfile.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get project details
-    const project = await db.select({
-      id: projects.id,
-      title: projects.title,
-      description: projects.description,
-      budgetMin: projects.budgetMin,
-      budgetMax: projects.budgetMax,
-      timeline: projects.timeline,
-      locationPref: projects.locationPref,
-      companyId: projects.companyId
-    })
-      .from(projects)
-      .where(eq(projects.id, id))
-      .limit(1)
+    const project = await db.projects.findById(id)
 
-    if (!project.length) {
+    if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     // Verify ownership
-    if (project[0].companyId !== userProfile[0].id) {
+    if (project.seekerId !== userProfile.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Get project required skills
-    const projectRequiredSkills = await db.select({
-      skillId: projectSkills.skillId,
-      skill: skills
-    })
-      .from(projectSkills)
-      .innerJoin(skills, eq(projectSkills.skillId, skills.id))
-      .where(eq(projectSkills.projectId, id))
+    const projectRequiredSkills = await db.projects.findProjectSkills(id)
 
     const requiredSkillIds = projectRequiredSkills.map(ps => ps.skillId)
 
@@ -77,46 +46,8 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
       })
     }
 
-    // Get developers with matching skills
-    const matchingDevelopers = await db.select({
-      developer: {
-        id: profiles.id,
-        displayName: profiles.displayName,
-        avatarUrl: profiles.avatarUrl,
-        createdAt: profiles.createdAt,
-      },
-      profile: {
-        headline: developerProfiles.headline,
-        bio: developerProfiles.bio,
-        rate: developerProfiles.rate,
-        availability: developerProfiles.availability,
-        country: developerProfiles.country,
-        portfolioUrl: developerProfiles.portfolioUrl,
-        githubUrl: developerProfiles.githubUrl,
-      },
-      skill: {
-        id: skills.id,
-        label: skills.label,
-        slug: skills.slug
-      },
-      skillLevel: developerSkills.level,
-      // Calculate skill match count for ranking
-      matchCount: sql<number>`COUNT(CASE WHEN ${developerSkills.skillId} IN (${sql.raw(requiredSkillIds.map(id => `${id}`).join(','))}) THEN 1 END) OVER (PARTITION BY ${profiles.id})`
-    })
-      .from(profiles)
-      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
-      .innerJoin(developerSkills, eq(profiles.id, developerSkills.userId))
-      .innerJoin(skills, eq(developerSkills.skillId, skills.id))
-      .where(
-        and(
-          eq(profiles.role, 'developer'),
-          eq(developerProfiles.approved, 'approved'),
-          inArray(developerSkills.skillId, requiredSkillIds)
-        )
-      )
+    const matchingDevelopers = await db.projects.findSmartMatchCandidates(requiredSkillIds)
 
-
-    // Group by developer and calculate match scores
     const developerMatches = new Map()
 
     matchingDevelopers.forEach(match => {
@@ -178,9 +109,9 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
       }
 
       // Rate score (20% of total score) - based on project budget
-      if (match.profile.rate && project[0].budgetMax) {
-        const developerRate = parseFloat(match.profile.rate)
-        const projectBudget = parseFloat(project[0].budgetMax)
+      if (match.profile.rate && project.budgetMax) {
+        const developerRate = parseFloat(match.profile.rate.toString())
+        const projectBudget = parseFloat(project.budgetMax.toString())
         const estimatedHours = 160 // Assume ~1 month project
         const projectHourlyBudget = projectBudget / estimatedHours
 
@@ -230,7 +161,6 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
           experience: match.experienceScore
         },
         matchPercentage: match.matchPercentage
-        // recommendationReason: generateRecommendationReason(match, requiredSkillIds.length)
       }))
 
     const topMatchesWithRecommendationReason = topMatches.map(tm => {
@@ -244,16 +174,16 @@ export async function GET(req: NextRequest, { params }: ProjectPageProps) {
     console.log(`TOP MATCHES! ${JSON.stringify(topMatchesWithRecommendationReason, null, "  ")}`)
 
     return NextResponse.json({
-      project: project[0],
+      project: project,
       requiredSkills: projectRequiredSkills.map(ps => ps.skill),
       matches: topMatchesWithRecommendationReason,
       totalMatches: scoredMatches.length,
       searchCriteria: {
         skillsRequired: requiredSkillIds.length,
-        budgetRange: project[0].budgetMin && project[0].budgetMax ? 
-          `$${project[0].budgetMin} - $${project[0].budgetMax}` : 
+        budgetRange: project.budgetMin && project.budgetMax ? 
+          `$${project.budgetMin} - $${project.budgetMax}` : 
           'Budget not specified',
-        timeline: project[0].timeline || 'Timeline not specified'
+        timeline: project.timeline || 'Timeline not specified'
       }
     })
 

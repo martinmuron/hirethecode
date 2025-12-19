@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { developerContacts, profiles } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/lib/database'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,13 +10,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user is a company
-    const userProfile = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
+    const userProfile = await db.profiles.findByUserId(user.id)
 
-    if (!userProfile.length || userProfile[0].role !== 'company') {
+    if (!userProfile || userProfile.role !== 'company') {
       return NextResponse.json({ error: 'Only companies can contact developers' }, { status: 403 })
     }
 
@@ -27,21 +22,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Developer ID and message are required' }, { status: 400 })
     }
 
-    // Verify developer exists
-    const developer = await db.select()
-      .from(profiles)
-      .where(and(
-        eq(profiles.id, developerId),
-        eq(profiles.role, 'developer')
-      ))
-      .limit(1)
+    const developer = await db.profiles.findByUserId(developerId)
 
-    if (!developer.length) {
+    if (!developer) {
       return NextResponse.json({ error: 'Developer not found' }, { status: 404 })
     }
 
-    // Create contact record
-    await db.insert(developerContacts).values({
+    await db.developerContacts.create({
       companyId: user.id,
       developerId,
       message: message.trim(),

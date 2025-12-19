@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { projects, profiles, projectSkills, skills, seekerProfiles } from '@/lib/db/schema'
@@ -15,16 +14,16 @@ interface ProjectPageProps {
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params
-  const session = await getServerSession(authOptions)
+  const user = await currentUser()
 
-  if (!session?.user?.email) {
+  if (!user?.email) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile
   const userProfile = await db.select()
     .from(profiles)
-    .where(eq(profiles.id, session.user.id))
+    .where(eq(profiles.id, user.id))
     .limit(1)
 
   if (!userProfile.length) {
@@ -74,7 +73,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   return (
     <ProjectDetail 
       project={projectWithDetails}
-      user={session.user} 
+      user={user} 
       userRole={profile.role as 'developer' | 'company' | 'admin' | 'seeker'} // Added seeker
       userId={profile.id}
       isOwner={profile.id === project.seekerId} // UPDATED: seekerId instead of companyId

@@ -1,8 +1,8 @@
+// This file is no longer used (because of clerk)
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { db } from '@/lib/db'
-import { users, profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server' // Add missing import
+import { db } from '@/lib/database'
 
 interface RegisterRequest {
   name: string

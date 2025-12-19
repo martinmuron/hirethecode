@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
-import { db } from '@/lib/db'
-import { 
-  projects, 
-  projectApplications,
-  profiles,
-  notifications
-} from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/lib/database'
 
 interface UpdateApplicationRequest {
   status: 'accepted' | 'rejected'
@@ -20,9 +12,9 @@ export async function PUT(
   { params }: { params: { id: string; applicationId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await currentUser()
 
-    if (!session?.user?.email) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -41,15 +33,9 @@ export async function PUT(
     }
 
     // Verify user owns this project
-    const project = await db.select()
-      .from(projects)
-      .where(and(
-        eq(projects.id, projectId),
-        eq(projects.seekerId, session.user.id)
-      ))
-      .limit(1)
+    const project = await db.projects.findById(id)
 
-    if (!project.length) {
+    if (!project) {
       return NextResponse.json(
         { error: 'Project not found or access denied' },
         { status: 404 }
@@ -57,19 +43,9 @@ export async function PUT(
     }
 
     // Get application with applicant details
-    const application = await db.select({
-      application: projectApplications,
-      applicant: profiles,
-    })
-      .from(projectApplications)
-      .innerJoin(profiles, eq(projectApplications.developerId, profiles.id))
-      .where(and(
-        eq(projectApplications.id, applicationId),
-        eq(projectApplications.projectId, projectId)
-      ))
-      .limit(1)
+    const application = await db.applications.findApplicationWithDetails(applicationId)
 
-    if (!application.length) {
+    if (!application) {
       return NextResponse.json(
         { error: 'Application not found' },
         { status: 404 }
@@ -77,32 +53,24 @@ export async function PUT(
     }
 
     // Update application status
-    const updatedApplication = await db.update(projectApplications)
-      .set({ status })
-      .where(eq(projectApplications.id, applicationId))
-      .returning()
+    const updatedApplication = await db.applications.updateStatus(applicationId, status)
 
     // Create notification for applicant
-    try {
-      await db.insert(notifications)
-        .values({
-          userId: application[0].applicant.id,
-          title: `Application ${status === 'accepted' ? 'Accepted' : 'Rejected'}`,
-          message: `Your application to "${project[0].title}" has been ${status}`,
-          type: 'application_status',
-          data: {
-            projectId: project[0].id,
-            applicationId,
-            status
-          }
-        })
-    } catch (notificationError) {
-      console.error('Error creating notification:', notificationError)
-    }
+    await db.notifications.create({
+      userId: application.applicant.id,
+      title: `Application ${status === 'accepted' ? 'Accepted' : 'Rejected'}`,
+      message: `Your application to "${project.title}" has been ${status}`,
+      type: 'application_status',
+      data: {
+        projectId: project.id,
+        applicationId,
+        status
+      }
+    })
 
     return NextResponse.json({
-      ...updatedApplication[0],
-      createdAt: updatedApplication[0].createdAt.toISOString()
+      ...updatedApplication,
+      createdAt: updatedApplication.createdAt.toISOString()
     })
 
   } catch (error) {

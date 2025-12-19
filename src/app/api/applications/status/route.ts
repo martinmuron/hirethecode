@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { projectApplications, profiles, projects, companyProfiles } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/lib/database'
 import { NotificationService } from '@/lib/services/notifications'
 
 export async function PATCH(req: NextRequest) {
   try {
     const user = await currentUser()
     
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user profile
-    const userProfile = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
+    const userProfile = await db.profiles.findById(user.id)
 
-    if (!userProfile.length || userProfile[0].role !== 'company') {
+    if (!userProfile || userProfile.role !== 'company') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -32,38 +28,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    // Get the application with project and company details to verify ownership
-    const application = await db.select({
-      id: projectApplications.id,
-      projectId: projectApplications.projectId,
-      developerId: projectApplications.developerId,
-      companyId: projects.companyId,
-      projectTitle: projects.title,
-      companyName: profiles.displayName,
-      companyProfileName: companyProfiles.companyName
-    })
-      .from(projectApplications)
-      .innerJoin(projects, eq(projectApplications.projectId, projects.id))
-      .innerJoin(profiles, eq(projects.companyId, profiles.id))
-      .leftJoin(companyProfiles, eq(profiles.id, companyProfiles.userId))
-      .where(eq(projectApplications.id, applicationId))
-      .limit(1)
+    const application = await db.applications.findApplicationWithDetails(applicationId)
 
-    if (!application.length) {
+    if (!application) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
     // Verify the company owns this project
-    if (application[0].companyId !== userProfile[0].id) {
+    if (application.companyId !== userProfile.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Update the application status
-    await db.update(projectApplications)
-      .set({ 
-        status: status as 'pending' | 'accepted' | 'rejected'
-      })
-      .where(eq(projectApplications.id, applicationId))
+    await db.applications.updateStatus(applicationId, status as 'pending' | 'accepted' | 'rejected')
 
     // Create notification for developer if status is accepted or rejected
     if (status === 'accepted' || status === 'rejected') {
@@ -80,7 +56,6 @@ export async function PATCH(req: NextRequest) {
         )
       } catch (notificationError) {
         console.error('Failed to create notification:', notificationError)
-        // Don't fail the entire request if notification creation fails
       }
     }
 

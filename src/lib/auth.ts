@@ -1,17 +1,14 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { profiles, subscriptions } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import type { Profile, Subscription } from '@/lib/db/schema'
+import { db } from '@/lib/database' 
+import type { Profile, Subscription } from '@/lib/database'
 
 export async function getUser() {
   try {
-    const { userId } = auth()
     const user = await currentUser()
-    console.log('getUser: auth().userId =', userId, 'currentUser =', user?.id) // Debug
+    console.log('getUser: currentUser =', user?.id)
 
-    const id = user?.id || userId
+    const id = user?.id
     return id ? { id } : null
   } catch(err) {
     console.error('getUser error:', error)
@@ -22,27 +19,13 @@ export async function getUser() {
 export async function getUserProfile(): Promise<Profile | null> {
   const user = await getUser()
   if (!user?.id) return null
-  
-  const profile = await db
-    .select()
-    .from(profiles)
-    .where(eq(profiles.id, user.id))
-    .limit(1)
-    
-  return profile[0] || null
+  return await db.profiles.findById(user.id) 
 }
 
 export async function getUserSubscription(): Promise<Subscription | null> {
   const user = await getUser()
   if (!user?.id) return null
-  
-  const subscription = await db
-    .select()
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, user.id))
-    .limit(1)
-    
-  return subscription[0] || null
+  return await db.subscriptions.findByUserId(user.id) 
 }
 
 export async function requireAuth() {

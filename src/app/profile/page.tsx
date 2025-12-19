@@ -24,7 +24,7 @@ export default async function ProfilePage() {
   }
 
   const profile = userProfile[0].profiles
-  const user = userProfile[0].users
+  // const user = userProfile[0].users
 
   if (profile.role === 'developer') {
     // Get developer-specific profile data
