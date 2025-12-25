@@ -1,13 +1,6 @@
 import { currentUser } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { 
-  projects, 
-  profiles,
-  projectSkills,
-  skills
-} from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 interface UpdateProjectBody {
   title: string
@@ -27,7 +20,7 @@ export async function PUT(
   try {
     const user = await currentUser()
 
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -35,22 +28,17 @@ export async function PUT(
     }
 
     // Get user profile
-    const userProfile = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
+    const userProfile = await db.profiles.findByUserId(user.id)
 
-    if (!userProfile.length) {
+    if (!userProfile) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
       )
     }
 
-    const profile = userProfile[0]
-
     // Only companies can update projects
-    if (profile.role !== 'company') {
+    if (userProfile.role !== 'company') {
       return NextResponse.json(
         { error: 'Only companies can update projects' },
         { status: 403 }
@@ -64,7 +52,7 @@ export async function PUT(
       .from(projects)
       .where(and(
         eq(projects.id, id),
-        eq(projects.companyId, profile.id)
+        eq(projects.companyId, userProfile.id)
       ))
       .limit(1)
 
