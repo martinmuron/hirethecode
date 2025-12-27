@@ -8,6 +8,7 @@ export interface IDatabaseProvider {
   applications: IApplicationRepository
   developerContacts: IDeveloperContactRepository
   developerProfiles: IDeveloperProfileRepository
+  seekerProfiles: ISeekerProfileRepository // Add this line
   skills: ISkillRepository
   developerSkills: IDeveloperSkillRepository
   companySkills: ICompanySkillRepository
@@ -44,6 +45,16 @@ export interface IProjectRepository {
   search(filters: ProjectFilters): Promise<Project[]>
   findProjectSkills(projectId: string): Promise<ProjectSkillWithDetails[]>
   findSmartMatchCandidates(requiredSkillIds: number[]): Promise<DeveloperMatchCandidate[]>
+  findOpenProjectsWithSeekers(): Promise<ProjectWithSeekerData[]>
+  findSkillsForProjects(projectIds: string[]): Promise<ProjectSkillsBulkData[]>
+}
+
+export interface ISeekerProfileRepository {
+  findByUserId(userId: string): Promise<SeekerProfile | null>
+  create(data: CreateSeekerProfileData): Promise<SeekerProfile>
+  update(userId: string, data: UpdateSeekerProfileData): Promise<SeekerProfile>
+  upsert(userId: string, data: CreateSeekerProfileData): Promise<SeekerProfile>
+  delete(userId: string): Promise<void>
 }
 
 export interface ISubscriptionRepository {
@@ -357,6 +368,44 @@ export interface CompanyMatchData {
   maxProjects?: number
 }
 
+export interface SeekerProfile {
+  userId: string
+  organizationName?: string
+  industry?: string
+  budgetMin?: number
+  budgetMax?: number
+  currency?: string
+  companySize?: 'individual' | 'startup' | 'small' | 'medium' | 'large' | 'enterprise'
+  typicalProjectTypes?: string[]
+  createdAt: Date
+}
+
+export interface ProjectWithSeekerData {
+  projectId: string
+  title: string
+  description: string
+  budgetMin?: number
+  budgetMax?: number
+  currency: string
+  timeline?: string
+  locationPref?: string
+  status: string
+  complexity?: string
+  recommendedFor?: string
+  createdAt: Date
+  seekerId: string
+  seekerDisplayName?: string
+  seekerAvatarUrl?: string
+  organizationName?: string
+}
+
+export interface ProjectSkillsBulkData {
+  projectId: string
+  skillId: number
+  skillSlug: string
+  skillLabel: string
+}
+
 // Create/Update data types
 export type CreateUserData = Omit<User, 'id' | 'createdAt'>
 export type UpdateUserData = Partial<CreateUserData>
@@ -379,6 +428,8 @@ export type CreateCompanyProfileData = CompanyProfile
 export type UpdateCompanyProfileData = Partial<Omit<CompanyProfile, 'userId'>>
 export type CreateCompanySkillData = Omit<CompanySkill, 'createdAt'>
 export type UpdateCompanySkillData = Partial<Omit<CompanySkill, 'userId'>>
+export type CreateSeekerProfileData = SeekerProfile
+export type UpdateSeekerProfileData = Partial<Omit<SeekerProfile, 'userId'>>
 
 export interface ProjectFilters {
   role?: string

@@ -1,7 +1,8 @@
 import { db } from '@/lib/db'
 import { 
   profiles, projects, subscriptions, notifications, projectApplications, companyProfiles, 
-  developerContacts, developerProfiles, skills, developerSkills, companySkills, projectSkills
+  developerContacts, developerProfiles, skills, developerSkills, companySkills, projectSkills,
+  seekerProfiles
 } from '@/lib/db/schema'
 import { eq, and, sql, inArray, gte, lte, desc, asc } from 'drizzle-orm'
 import type { 
@@ -15,6 +16,9 @@ import type {
   ApplicationWithApplicantDetails,
   IDeveloperContactRepository,
   IDeveloperProfileRepository,
+  ISeekerProfileRepository,
+  SeekerProfile, ProjectWithSeekerData, ProjectSkillsBulkData,
+  CreateSeekerProfileData, UpdateSeekerProfileData,
   ISkillRepository,
   IDeveloperSkillRepository,
   ICompanyProfileRepository,
@@ -218,6 +222,59 @@ class NeonProjectRepository implements IProjectRepository {
 
     return result
   }
+
+  async findOpenProjectsWithSeekers(): Promise<ProjectWithSeekerData[]> {
+    const result = await db.select({
+      // Project fields
+      projectId: projects.id,
+      title: projects.title,
+      description: projects.description,
+      budgetMin: projects.budgetMin,
+      budgetMax: projects.budgetMax,
+      currency: projects.currency,
+      timeline: projects.timeline,
+      locationPref: projects.locationPref,
+      status: projects.status,
+      complexity: projects.complexity,
+      recommendedFor: projects.recommendedFor,
+      createdAt: projects.createdAt,
+      
+      // Seeker profile fields
+      seekerId: profiles.id,
+      seekerDisplayName: profiles.displayName,
+      seekerAvatarUrl: profiles.avatarUrl,
+      
+      // Seeker organization name (from seekerProfiles if available)
+      organizationName: seekerProfiles.organizationName,
+    })
+      .from(projects)
+      .innerJoin(profiles, eq(projects.seekerId, profiles.id))
+      .leftJoin(seekerProfiles, eq(profiles.id, seekerProfiles.userId))
+      .where(
+        and(
+          eq(projects.status, 'open'),
+          eq(profiles.role, 'seeker')
+        )
+      )
+      .orderBy(desc(projects.createdAt))
+
+    return result
+  }
+
+  async findSkillsForProjects(projectIds: string[]): Promise<ProjectSkillsBulkData[]> {
+    const result = await db.select({
+      projectId: projectSkills.projectId,
+      skillId: skills.id,
+      skillSlug: skills.slug,
+      skillLabel: skills.label,
+    })
+      .from(projectSkills)
+      .innerJoin(skills, eq(projectSkills.skillId, skills.id))
+      .where(inArray(projectSkills.projectId, projectIds))
+
+    return result
+  }
+
 }
 
 class NeonSubscriptionRepository implements ISubscriptionRepository {
@@ -653,6 +710,48 @@ class NeonDeveloperProfileRepository implements IDeveloperProfileRepository {
   }
 }
 
+class NeonSeekerProfileRepository implements ISeekerProfileRepository {
+  async findByUserId(userId: string): Promise<SeekerProfile | null> {
+    const result = await db.select()
+      .from(seekerProfiles)
+      .where(eq(seekerProfiles.userId, userId))
+      .limit(1)
+    
+    return result[0] || null
+  }
+
+  async create(data: CreateSeekerProfileData): Promise<SeekerProfile> {
+    const result = await db.insert(seekerProfiles)
+      .values(data)
+      .returning()
+    
+    return result[0]
+  }
+
+  async update(userId: string, data: UpdateSeekerProfileData): Promise<SeekerProfile> {
+    const result = await db.update(seekerProfiles)
+      .set(data)
+      .where(eq(seekerProfiles.userId, userId))
+      .returning()
+    
+    return result[0]
+  }
+
+  async upsert(userId: string, data: CreateSeekerProfileData): Promise<SeekerProfile> {
+    const existing = await this.findByUserId(userId)
+    
+    if (existing) {
+      return await this.update(userId, data)
+    } else {
+      return await this.create(data)
+    }
+  }
+
+  async delete(userId: string): Promise<void> {
+    await db.delete(seekerProfiles).where(eq(seekerProfiles.userId, userId))
+  }
+}
+
 class NeonSkillRepository implements ISkillRepository {
   async findById(id: number): Promise<Skill | null> {
     const result = await db.select()
@@ -954,6 +1053,7 @@ export class NeonDatabaseProvider implements IDatabaseProvider {
   applications = new NeonApplicationRepository()
   developerContacts = new NeonDeveloperContactRepository()
   developerProfiles = new NeonDeveloperProfileRepository()
+  seekerProfiles = new NeonSeekerProfileRepository() // Add this line
   skills = new NeonSkillRepository()
   developerSkills = new NeonDeveloperSkillRepository()
   companySkills = new NeonCompanySkillRepository()
