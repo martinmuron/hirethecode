@@ -8,10 +8,15 @@ export interface IDatabaseProvider {
   applications: IApplicationRepository
   developerContacts: IDeveloperContactRepository
   developerProfiles: IDeveloperProfileRepository
-  seekerProfiles: ISeekerProfileRepository // Add this line
+  seekerProfiles: ISeekerProfileRepository
   skills: ISkillRepository
   developerSkills: IDeveloperSkillRepository
   companySkills: ICompanySkillRepository
+  adminStats: IAdminStatsRepository
+
+  getCompanyDashboardData(companyId: string): Promise<CompanyDashboardData>
+  getCompanyProjectsData(companyId: string): Promise<CompanyProjectsData>
+  getDeveloperPageData(developerId: string, currentUserId: string): Promise<DeveloperPageData | null>
   
   // Transaction support
   transaction<T>(fn: (tx: IDatabaseProvider) => Promise<T>): Promise<T>
@@ -33,6 +38,7 @@ export interface IProfileRepository {
   upsert(userId: string, data: CreateDeveloperProfileData): Promise<DeveloperProfile>
   delete(id: string): Promise<void>
   findByRole(role: string): Promise<Profile[]>
+  findDeveloperWithFullDetails(developerId: string): Promise<DeveloperFullProfile | null>
 }
 
 export interface IProjectRepository {
@@ -47,6 +53,9 @@ export interface IProjectRepository {
   findSmartMatchCandidates(requiredSkillIds: number[]): Promise<DeveloperMatchCandidate[]>
   findOpenProjectsWithSeekers(): Promise<ProjectWithSeekerData[]>
   findSkillsForProjects(projectIds: string[]): Promise<ProjectSkillsBulkData[]>
+  findProjectsByCompanyId(companyId: string, limit?: number): Promise<CompanyDashboardProject[]>
+  findAllProjectsByCompanyId(companyId: string): Promise<CompanyProjectWithDetails[]>
+  findOpenProjectsCountBySeekerId(seekerId: string): Promise<int>
 }
 
 export interface ISeekerProfileRepository {
@@ -67,6 +76,7 @@ export interface ISubscriptionRepository {
 export interface INotificationRepository {
   findByUserId(userId: string): Promise<Notification[]>
   findUnreadByUserId(userId: string): Promise<Notification[]>
+  findUnreadCountByUserId(userId: string): Promise<int>
   create(data: CreateNotificationData): Promise<Notification>
   markAsRead(id: string): Promise<void>
   markAllAsRead(userId: string): Promise<void>
@@ -86,6 +96,9 @@ export interface IApplicationRepository {
   findApplicationWithDetails(applicationId: string): Promise<ApplicationWithDetails | null>
   findByProjectAndUser(projectId: string, userId: string): Promise<ProjectApplication | null>
   findApplicationsWithApplicantDetails(projectId: string): Promise<ApplicationWithApplicantDetails[]>
+  getApplicationStatsByProjectIds(projectIds: string[]): Promise<ApplicationStats[]>
+  getRecentApplicationsForCompany(companyId: string, limit?: number): Promise<CompanyApplicationWithDetails[]>
+  findApplicationsForProjects(projectIds: string[]): Promise<ProjectApplicationWithDeveloper[]>
 }
 
 export interface ApplicationWithApplicantDetails {
@@ -117,6 +130,10 @@ export interface IDeveloperProfileRepository {
   findApprovedDevelopers(filters: DeveloperFilters): Promise<DeveloperSearchResult[]>
   findMatchingDevelopers(skillIds: number[]): Promise<DeveloperMatchData[]>
   getTotalSkillsCount(userId: string): Promise<number>
+  findDevelopersForAdmin(filters: AdminDeveloperFilters): Promise<AdminDeveloperData[]>
+  getTotalDevelopersCount(filters: AdminDeveloperFilters): Promise<number>
+  updateApprovalStatus(userId: string, status: 'approved' | 'rejected' | 'pending'): Promise<DeveloperProfile>
+  findDevelopersForCompanyMatch(skillIds: number[]): Promise<DeveloperSmartMatchData[]>
 }
 
 export interface ISkillRepository {
@@ -135,6 +152,7 @@ export interface IDeveloperSkillRepository {
   updateSkillLevel(userId: string, skillId: number, level: string): Promise<DeveloperSkill>
   removeAllForUser(userId: string): Promise<void>
   replaceAllForUser(userId: string, skills: Array<{skillId: number, level: string}>): Promise<void>
+  findSkillsWithDetailsForDeveloper(developerId: string): Promise<DeveloperSkillWithDetails[]>
 }
 
 export interface ICompanyProfileRepository {
@@ -152,6 +170,24 @@ export interface ICompanySkillRepository {
   replaceAllForUser(userId: string, skills: Array<{label: string, importance: string}>): Promise<void>
   addSkillToUser(userId: string, skillId: number, importance: string): Promise<CompanySkill>
   removeAllForUser(userId: string): Promise<void>
+  findSkillsWithDetailsForCompany(companyId: string): Promise<CompanySkillWithImportance[]>
+  findCompaniesWithMatchingSkills(skillIds: number[]): Promise<CompanySmartMatchData[]>
+}
+
+export interface IAdminStatsRepository {
+  getTotalUsersCount(): Promise<number>
+  getPendingDevelopersCount(): Promise<number>
+  getApprovedDevelopersCount(): Promise<number>
+  getRejectedDevelopersCount(): Promise<number>
+  getTotalCompaniesCount(): Promise<number>
+  getActiveProjectsCount(): Promise<number>
+  getTotalProjectsCount(): Promise<number>
+  getClosedProjectsCount(): Promise<number>
+  getActiveSubscriptionsCount(): Promise<number>
+  getRecentSignupsCount(days?: number): Promise<number>
+  getDeveloperStatsByStatus(): Promise<DeveloperStatusStats>
+  getProjectStatsByStatus(): Promise<ProjectStatusStats>
+  getAdminDashboardStats(): Promise<AdminDashboardStats>
 }
 
 
@@ -404,6 +440,217 @@ export interface ProjectSkillsBulkData {
   skillId: number
   skillSlug: string
   skillLabel: string
+}
+
+export interface AdminDeveloperFilters {
+  status?: 'pending' | 'approved' | 'rejected' | 'all'
+  page?: number
+  limit?: number
+  offset?: number
+}
+
+export interface AdminDeveloperData {
+  profileId: string
+  displayName?: string
+  avatarUrl?: string
+  timezone?: string
+  profileCreatedAt: Date
+  headline?: string
+  bio?: string
+  rate?: number
+  availability: 'available' | 'busy' | 'unavailable'
+  approved: 'approved' | 'pending' | 'rejected'
+  portfolioUrl?: string
+  githubUrl?: string
+  websiteUrl?: string
+  country?: string
+}
+
+export interface AdminDeveloperWithSkills extends AdminDeveloperData {
+  skills: Array<{
+    skillId: number
+    skillSlug: string
+    skillLabel: string
+    level: string
+  }>
+}
+
+export interface DeveloperStatusStats {
+  pending: number
+  approved: number
+  rejected: number
+  total: number
+}
+
+export interface ProjectStatusStats {
+  open: number
+  in_progress: number
+  closed: number
+  total: number
+}
+
+export interface AdminDashboardStats {
+  totalUsers: number
+  totalDevelopers: number
+  pendingDevelopers: number
+  approvedDevelopers: number
+  rejectedDevelopers: number
+  totalCompanies: number
+  totalProjects: number
+  activeProjects: number
+  closedProjects: number
+  activeSubscriptions: number
+  recentSignups: number
+  estimatedMonthlyRevenue: number
+  developerApprovalRate: number
+  projectCompletionRate: number
+}
+
+export interface CompanySkillWithImportance {
+  skillId: number
+  importance: 'nice_to_have' | 'preferred' | 'required'
+  skill: Skill
+}
+
+export interface DeveloperSmartMatchData {
+  developer: {
+    id: string
+    displayName?: string
+    avatarUrl?: string
+    createdAt: Date
+  }
+  profile: {
+    headline?: string
+    bio?: string
+    rate?: number
+    availability: 'available' | 'busy' | 'unavailable'
+    country?: string
+    portfolioUrl?: string
+    githubUrl?: string
+  }
+  skill: Skill
+  skillLevel: string
+}
+
+export interface CompanySmartMatchData {
+  company: {
+    id: string
+    displayName?: string
+    avatarUrl?: string
+    createdAt: Date
+  }
+  companyProfile: {
+    companyName: string
+    logoUrl?: string
+    about?: string
+    industry?: string
+    size?: string
+    workStyle?: 'remote' | 'hybrid' | 'onsite' | 'flexible'
+    experienceLevel?: 'junior' | 'mid' | 'senior' | 'lead' | 'any'
+  }
+  skill: Skill
+  skillImportance: string
+}
+
+export interface CompanyDashboardProject {
+  id: string
+  title: string
+  description: string
+  status: string
+  createdAt: Date
+}
+
+export interface ApplicationStats {
+  projectId: string
+  status: string
+  count: number
+}
+
+export interface CompanyApplicationWithDetails {
+  id: string
+  projectId: string
+  projectTitle: string
+  status: string
+  createdAt: Date
+  developer: {
+    id: string
+    displayName?: string
+    avatarUrl?: string
+  }
+  developerProfile: {
+    headline?: string
+    rate?: number
+    availability: string
+  }
+}
+
+export interface CompanyDashboardData {
+  projects: CompanyDashboardProject[]
+  recentApplications: CompanyApplicationWithDetails[]
+  subscription: Subscription | null
+  stats: {
+    totalProjects: number
+    activeProjects: number
+    totalApplications: number
+    pendingApplications: number
+  }
+}
+
+export interface CompanyProjectWithDetails {
+  id: string
+  title: string
+  description: string
+  budgetMin?: number
+  budgetMax?: number
+  currency: string
+  timeline?: string
+  status: string
+  createdAt: Date
+}
+
+export interface ProjectApplicationWithDeveloper {
+  id: string
+  projectId: string
+  message: string
+  status: string
+  createdAt: Date
+  developer: {
+    id: string
+    displayName?: string
+    avatarUrl?: string
+    email?: string
+  }
+  developerProfile: {
+    headline?: string
+    rate?: number
+    availability: string
+  }
+}
+
+export interface CompanyProjectWithApplications extends CompanyProjectWithDetails {
+  applications: ProjectApplicationWithDeveloper[]
+  applicationCount: number
+  pendingCount: number
+}
+
+export interface CompanyProjectsData {
+  projects: CompanyProjectWithApplications[]
+}
+
+export interface DeveloperFullProfile {
+  profile: Profile
+  developerProfile: DeveloperProfile | null
+  skills: Array<{
+    id: number
+    slug: string
+    label: string
+    level: string
+  }>
+}
+
+export interface DeveloperPageData {
+  developer: DeveloperFullProfile
+  isOwner: boolean
 }
 
 // Create/Update data types

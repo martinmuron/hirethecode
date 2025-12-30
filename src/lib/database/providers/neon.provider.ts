@@ -4,7 +4,7 @@ import {
   developerContacts, developerProfiles, skills, developerSkills, companySkills, projectSkills,
   seekerProfiles
 } from '@/lib/db/schema'
-import { eq, and, sql, inArray, gte, lte, desc, asc } from 'drizzle-orm'
+import { eq, and, sql, inArray, gte, lte, desc, desc, asc, count, or } from 'drizzle-orm'
 import type { 
   IDatabaseProvider, 
   IUserRepository, 
@@ -23,6 +23,7 @@ import type {
   IDeveloperSkillRepository,
   ICompanyProfileRepository,
   ICompanySkillRepository,
+  IAdminStatsRepository, DeveloperStatusStats, ProjectStatusStats, AdminDashboardStats,
   User, Profile, Project, Subscription, Notification, ProjectApplication, ApplicationWithDetails, 
   CompanyProfile, CompanySkill, CompanySkillWithDetails,
   DeveloperContact, DeveloperProfile, Skill, DeveloperSkill, DeveloperSkillWithDetails, DeveloperSearchResult,
@@ -33,7 +34,12 @@ import type {
   CreateDeveloperContactData, UpdateDeveloperContactData,
   CreateDeveloperProfileData, UpdateDeveloperProfileData, CreateSkillData, UpdateSkillData,
   CreateCompanyProfileData, UpdateCompanyProfileData, CreateCompanySkillData, UpdateCompanySkillData,
+  CompanySkillWithImportance, DeveloperSmartMatchData, CompanySmartMatchData,
   ProjectFilters, DeveloperFilters,
+  AdminDeveloperFilters, AdminDeveloperData, AdminDeveloperWithSkills,
+  CompanyDashboardProject, ApplicationStats, CompanyApplicationWithDetails, CompanyDashboardData,
+  CompanyProjectWithDetails, ProjectApplicationWithDeveloper, CompanyProjectWithApplications, CompanyProjectsData,
+  DeveloperFullProfile, DeveloperPageData,
   DeveloperMatchData, CompanyMatchData
 } from '../interfaces/database.interface'
 
@@ -100,6 +106,43 @@ class NeonProfileRepository implements IProfileRepository {
     return await db.select()
       .from(profiles)
       .where(eq(profiles.role, role as any))
+  }
+
+  async findDeveloperWithFullDetails(developerId: string): Promise<DeveloperFullProfile | null> {
+    // Get basic profile data
+    const profile = await this.findById(developerId)
+    
+    if (!profile || profile.role !== 'developer') {
+      return null
+    }
+
+    // Get developer profile and skills in parallel
+    const [developerProfile, skillsData] = await Promise.all([
+      db.select()
+        .from(developerProfiles)
+        .where(eq(developerProfiles.userId, developerId))
+        .limit(1)
+        .then(result => result[0] || null),
+      
+      db.select({
+        skill: skills,
+        level: developerSkills.level
+      })
+        .from(developerSkills)
+        .innerJoin(skills, eq(developerSkills.skillId, skills.id))
+        .where(eq(developerSkills.userId, developerId))
+    ])
+
+    return {
+      profile,
+      developerProfile,
+      skills: skillsData.map(ds => ({
+        id: ds.skill.id,
+        slug: ds.skill.slug,
+        label: ds.skill.label,
+        level: ds.level
+      }))
+    }
   }
 }
 
@@ -275,6 +318,49 @@ class NeonProjectRepository implements IProjectRepository {
     return result
   }
 
+  async findProjectsByCompanyId(companyId: string, limit: number = 10): Promise<CompanyDashboardProject[]> {
+    const result = await db.select({
+      id: projects.id,
+      title: projects.title,
+      description: projects.description,
+      status: projects.status,
+      createdAt: projects.createdAt,
+    })
+      .from(projects)
+      .where(eq(projects.seekerId, companyId)) // Note: using seekerId for consistency
+      .orderBy(desc(projects.createdAt))
+      .limit(limit)
+
+    return result
+  }
+
+  async findAllProjectsByCompanyId(companyId: string): Promise<CompanyProjectWithDetails[]> {
+    const result = await db.select({
+      id: projects.id,
+      title: projects.title,
+      description: projects.description,
+      budgetMin: projects.budgetMin,
+      budgetMax: projects.budgetMax,
+      currency: projects.currency,
+      timeline: projects.timeline,
+      status: projects.status,
+      createdAt: projects.createdAt,
+    })
+      .from(projects)
+      .where(eq(projects.seekerId, companyId)) // Note: using seekerId for consistency
+      .orderBy(desc(projects.createdAt))
+
+    return result
+  }
+
+  async findOpenProjectsCountBySeekerId(seekerId: string): Promise<int> {
+    return await db.select({ count: sql<number>`count(*)` })
+      .from(projects)
+      .where(and(
+        eq(projects.seekerId, id),
+        eq(projects.status, 'open')
+      ))
+  }
 }
 
 class NeonSubscriptionRepository implements ISubscriptionRepository {
@@ -321,6 +407,15 @@ class NeonNotificationRepository implements INotificationRepository {
       .from(notifications)
       .where(and(
         eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ))
+  }
+
+  async findUnreadCountByUserId(userId: string): Promise<int> {
+    return await db.select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, id),
         eq(notifications.isRead, false)
       ))
   }
@@ -458,6 +553,114 @@ class NeonApplicationRepository implements IApplicationRepository {
     }))
   }
 
+  async getApplicationStatsByProjectIds(projectIds: string[]): Promise<ApplicationStats[]> {
+    if (projectIds.length === 0) return []
+
+    const result = await db.select({
+      projectId: projectApplications.projectId,
+      status: projectApplications.status,
+      count: count()
+    })
+      .from(projectApplications)
+      .where(inArray(projectApplications.projectId, projectIds))
+      .groupBy(projectApplications.projectId, projectApplications.status)
+
+    return result
+  }
+
+  async getRecentApplicationsForCompany(companyId: string, limit: number = 10): Promise<CompanyApplicationWithDetails[]> {
+    const result = await db.select({
+      id: projectApplications.id,
+      projectId: projectApplications.projectId,
+      projectTitle: projects.title,
+      status: projectApplications.status,
+      createdAt: projectApplications.createdAt,
+      developer: {
+        id: profiles.id,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+      },
+      developerProfile: {
+        headline: developerProfiles.headline,
+        rate: developerProfiles.rate,
+        availability: developerProfiles.availability,
+      }
+    })
+      .from(projectApplications)
+      .innerJoin(projects, eq(projectApplications.projectId, projects.id))
+      .innerJoin(profiles, eq(projectApplications.developerId, profiles.id))
+      .leftJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(eq(projects.seekerId, companyId)) // Note: using seekerId for consistency
+      .orderBy(desc(projectApplications.createdAt))
+      .limit(limit)
+
+    return result.map(row => ({
+      id: row.id,
+      projectId: row.projectId,
+      projectTitle: row.projectTitle,
+      status: row.status,
+      createdAt: row.createdAt,
+      developer: row.developer,
+      developerProfile: {
+        headline: row.developerProfile.headline,
+        rate: row.developerProfile.rate,
+        availability: row.developerProfile.availability || 'unavailable'
+      }
+    }))
+  }
+
+  async findApplicationsForProjects(projectIds: string[]): Promise<ProjectApplicationWithDeveloper[]> {
+    if (projectIds.length === 0) return []
+
+    const result = await db.select({
+      id: projectApplications.id,
+      projectId: projectApplications.projectId,
+      message: projectApplications.message,
+      status: projectApplications.status,
+      createdAt: projectApplications.createdAt,
+      developer: {
+        id: profiles.id,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+        // Note: Can't get email from Clerk users table since users are managed externally
+        email: sql<string>`NULL`, // Placeholder - email comes from Clerk
+      },
+      developerProfile: {
+        headline: developerProfiles.headline,
+        rate: developerProfiles.rate,
+        availability: developerProfiles.availability,
+      }
+    })
+      .from(projectApplications)
+      .innerJoin(profiles, eq(projectApplications.developerId, profiles.id))
+      .leftJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(
+        and(
+          inArray(projectApplications.projectId, projectIds),
+          eq(profiles.role, 'developer')
+        )
+      )
+      .orderBy(desc(projectApplications.createdAt))
+
+    return result.map(row => ({
+      id: row.id,
+      projectId: row.projectId,
+      message: row.message,
+      status: row.status,
+      createdAt: row.createdAt,
+      developer: {
+        id: row.developer.id,
+        displayName: row.developer.displayName,
+        avatarUrl: row.developer.avatarUrl,
+        email: undefined // Will need to be fetched from Clerk if needed
+      },
+      developerProfile: {
+        headline: row.developerProfile.headline,
+        rate: row.developerProfile.rate,
+        availability: row.developerProfile.availability || 'unavailable'
+      }
+    }))
+  }
 }
 
 class NeonDeveloperContactRepository implements IDeveloperContactRepository {
@@ -708,6 +911,118 @@ class NeonDeveloperProfileRepository implements IDeveloperProfileRepository {
 
     return result[0]?.count || 0
   }
+
+  async findDevelopersForAdmin(filters: AdminDeveloperFilters): Promise<AdminDeveloperData[]> {
+    // Build where conditions
+    let whereConditions = eq(profiles.role, 'developer')
+    
+    if (filters.status && filters.status !== 'all') {
+      whereConditions = and(
+        whereConditions,
+        eq(developerProfiles.approved, filters.status)
+      )
+    }
+
+    const result = await db.select({
+      // Profile info
+      profileId: profiles.id,
+      displayName: profiles.displayName,
+      avatarUrl: profiles.avatarUrl,
+      timezone: profiles.timezone,
+      profileCreatedAt: profiles.createdAt,
+      
+      // Developer profile info
+      headline: developerProfiles.headline,
+      bio: developerProfiles.bio,
+      rate: developerProfiles.rate,
+      availability: developerProfiles.availability,
+      approved: developerProfiles.approved,
+      portfolioUrl: developerProfiles.portfolioUrl,
+      githubUrl: developerProfiles.githubUrl,
+      websiteUrl: developerProfiles.websiteUrl,
+      country: developerProfiles.country,
+    })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(whereConditions)
+      .orderBy(desc(profiles.createdAt))
+      .limit(filters.limit || 10)
+      .offset(filters.offset || 0)
+
+    return result
+  }
+
+  async getTotalDevelopersCount(filters: AdminDeveloperFilters): Promise<number> {
+    // Build where conditions (same as above)
+    let whereConditions = eq(profiles.role, 'developer')
+    
+    if (filters.status && filters.status !== 'all') {
+      whereConditions = and(
+        whereConditions,
+        eq(developerProfiles.approved, filters.status)
+      )
+    }
+
+    const [totalResult] = await db.select({ count: count() })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(whereConditions)
+
+    return totalResult.count
+  }
+
+  async updateApprovalStatus(userId: string, status: 'approved' | 'rejected' | 'pending'): Promise<DeveloperProfile> {
+    const [updatedDeveloper] = await db.update(developerProfiles)
+      .set({ approved: status })
+      .where(eq(developerProfiles.userId, userId))
+      .returning()
+
+    if (!updatedDeveloper) {
+      throw new Error('Developer not found')
+    }
+
+    return updatedDeveloper
+  }
+
+  async findDevelopersForCompanyMatch(skillIds: number[]): Promise<DeveloperSmartMatchData[]> {
+    const result = await db.select({
+      developer: {
+        id: profiles.id,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+        createdAt: profiles.createdAt,
+      },
+      profile: {
+        headline: developerProfiles.headline,
+        bio: developerProfiles.bio,
+        rate: developerProfiles.rate,
+        availability: developerProfiles.availability,
+        country: developerProfiles.country,
+        portfolioUrl: developerProfiles.portfolioUrl,
+        githubUrl: developerProfiles.githubUrl,
+      },
+      skill: {
+        id: skills.id,
+        label: skills.label,
+        slug: skills.slug
+      },
+      skillLevel: developerSkills.level
+    })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .innerJoin(developerSkills, eq(profiles.id, developerSkills.userId))
+      .innerJoin(skills, eq(developerSkills.skillId, skills.id))
+      .where(
+        and(
+          eq(profiles.role, 'developer'),
+          eq(developerProfiles.approved, 'approved'),
+          inArray(developerSkills.skillId, skillIds)
+        )
+      )
+
+    return result
+  }
+
 }
 
 class NeonSeekerProfileRepository implements ISeekerProfileRepository {
@@ -889,6 +1204,52 @@ class NeonDeveloperSkillRepository implements IDeveloperSkillRepository {
       }
     }
   }
+
+  async findSkillsForDevelopers(userIds: string[]): Promise<Map<string, Array<{skillId: number, skillSlug: string, skillLabel: string, level: string}>>> {
+    const result = await db.select({
+      userId: developerSkills.userId,
+      skillId: skills.id,
+      skillSlug: skills.slug,
+      skillLabel: skills.label,
+      level: developerSkills.level,
+    })
+      .from(developerSkills)
+      .innerJoin(skills, eq(developerSkills.skillId, skills.id))
+      .where(inArray(developerSkills.userId, userIds))
+
+    // Group by userId
+    const skillsByUser = new Map<string, Array<{skillId: number, skillSlug: string, skillLabel: string, level: string}>>()
+    
+    for (const skill of result) {
+      if (!skillsByUser.has(skill.userId)) {
+        skillsByUser.set(skill.userId, [])
+      }
+      skillsByUser.get(skill.userId)!.push({
+        skillId: skill.skillId,
+        skillSlug: skill.skillSlug,
+        skillLabel: skill.skillLabel,
+        level: skill.level
+      })
+    }
+
+    return skillsByUser
+  }
+
+  async findSkillsWithDetailsForDeveloper(developerId: string): Promise<DeveloperSkillWithDetails[]> {
+    const result = await db.select({
+      skill: skills,
+      level: developerSkills.level,
+      skillId: developerSkills.skillId
+    })
+      .from(developerSkills)
+      .innerJoin(skills, eq(developerSkills.skillId, skills.id))
+      .where(eq(developerSkills.userId, developerId))
+
+    return result.map(r => ({
+      skill: r.skill,
+      level: r.level
+    }))
+  }
 }
 
 class NeonCompanyProfileRepository implements ICompanyProfileRepository {
@@ -1040,9 +1401,239 @@ class NeonCompanySkillRepository implements ICompanySkillRepository {
       }
     }
   }
+
+  async findSkillsWithDetailsForCompany(companyId: string): Promise<CompanySkillWithImportance[]> {
+    const result = await db.select({
+      skillId: companySkills.skillId,
+      importance: companySkills.importance,
+      skill: skills
+    })
+      .from(companySkills)
+      .innerJoin(skills, eq(companySkills.skillId, skills.id))
+      .where(eq(companySkills.userId, companyId))
+
+    return result
+  }
+
+  async findCompaniesWithMatchingSkills(skillIds: number[]): Promise<CompanySmartMatchData[]> {
+    const result = await db.select({
+      company: {
+        id: profiles.id,
+        displayName: profiles.displayName,
+        avatarUrl: profiles.avatarUrl,
+        createdAt: profiles.createdAt,
+      },
+      companyProfile: {
+        companyName: companyProfiles.companyName,
+        logoUrl: companyProfiles.logoUrl,
+        about: companyProfiles.about,
+        industry: companyProfiles.industry,
+        size: companyProfiles.size,
+        workStyle: companyProfiles.workStyle,
+        experienceLevel: companyProfiles.experienceLevel,
+      },
+      skill: {
+        id: skills.id,
+        label: skills.label,
+        slug: skills.slug
+      },
+      skillImportance: companySkills.importance
+    })
+      .from(profiles)
+      .innerJoin(companyProfiles, eq(profiles.id, companyProfiles.userId))
+      .innerJoin(companySkills, eq(profiles.id, companySkills.userId))
+      .innerJoin(skills, eq(companySkills.skillId, skills.id))
+      .where(
+        and(
+          eq(profiles.role, 'company'),
+          inArray(companySkills.skillId, skillIds)
+        )
+      )
+
+    return result
+  }
 }
 
+class NeonAdminStatsRepository implements IAdminStatsRepository {
+  async getTotalUsersCount(): Promise<number> {
+    // Since users are managed by Clerk, we'll count profiles instead
+    const [result] = await db.select({ count: count() }).from(profiles)
+    return result?.count || 0
+  }
 
+  async getPendingDevelopersCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(
+        and(
+          eq(profiles.role, 'developer'),
+          eq(developerProfiles.approved, 'pending')
+        )
+      )
+    return result?.count || 0
+  }
+
+  async getApprovedDevelopersCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(
+        and(
+          eq(profiles.role, 'developer'),
+          eq(developerProfiles.approved, 'approved')
+        )
+      )
+    return result?.count || 0
+  }
+
+  async getRejectedDevelopersCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(profiles)
+      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
+      .where(
+        and(
+          eq(profiles.role, 'developer'),
+          eq(developerProfiles.approved, 'rejected')
+        )
+      )
+    return result?.count || 0
+  }
+
+  async getTotalCompaniesCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(profiles)
+      .innerJoin(companyProfiles, eq(profiles.id, companyProfiles.userId))
+      .where(eq(profiles.role, 'company'))
+    return result?.count || 0
+  }
+
+  async getActiveProjectsCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(projects)
+      .where(
+        or(
+          eq(projects.status, 'open'),
+          eq(projects.status, 'in_progress')
+        )
+      )
+    return result?.count || 0
+  }
+
+  async getTotalProjectsCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(projects)
+    return result?.count || 0
+  }
+
+  async getClosedProjectsCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(projects)
+      .where(eq(projects.status, 'closed'))
+    return result?.count || 0
+  }
+
+  async getActiveSubscriptionsCount(): Promise<number> {
+    const [result] = await db.select({ count: count() })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.status, 'active'),
+          gte(subscriptions.currentPeriodEnd, new Date())
+        )
+      )
+    return result?.count || 0
+  }
+
+  async getRecentSignupsCount(days: number = 30): Promise<number> {
+    // Count recent profiles since users are managed by Clerk
+    const [result] = await db.select({ count: count() })
+      .from(profiles)
+      .where(
+        gte(profiles.createdAt, sql`NOW() - INTERVAL '${sql.raw(days.toString())} days'`)
+      )
+    return result?.count || 0
+  }
+
+  async getDeveloperStatsByStatus(): Promise<DeveloperStatusStats> {
+    const [pending, approved, rejected, total] = await Promise.all([
+      this.getPendingDevelopersCount(),
+      this.getApprovedDevelopersCount(),
+      this.getRejectedDevelopersCount(),
+      db.select({ count: count() })
+        .from(profiles)
+        .where(eq(profiles.role, 'developer'))
+        .then(result => result[0]?.count || 0)
+    ])
+
+    return { pending, approved, rejected, total }
+  }
+
+  async getProjectStatsByStatus(): Promise<ProjectStatusStats> {
+    const [open, in_progress, closed, total] = await Promise.all([
+      db.select({ count: count() })
+        .from(projects)
+        .where(eq(projects.status, 'open'))
+        .then(result => result[0]?.count || 0),
+      db.select({ count: count() })
+        .from(projects)
+        .where(eq(projects.status, 'in_progress'))
+        .then(result => result[0]?.count || 0),
+      this.getClosedProjectsCount(),
+      this.getTotalProjectsCount()
+    ])
+
+    return { open, in_progress, closed, total }
+  }
+
+  async getAdminDashboardStats(): Promise<AdminDashboardStats> {
+    const [
+      totalUsers,
+      developerStats,
+      totalCompanies,
+      projectStats,
+      activeSubscriptions,
+      recentSignups
+    ] = await Promise.all([
+      this.getTotalUsersCount(),
+      this.getDeveloperStatsByStatus(),
+      this.getTotalCompaniesCount(),
+      this.getProjectStatsByStatus(),
+      this.getActiveSubscriptionsCount(),
+      this.getRecentSignupsCount(30)
+    ])
+
+    // Calculate estimated revenue (adjust based on your pricing model)
+    const estimatedMonthlyRevenue = activeSubscriptions * 29 // $29 average per subscription
+
+    // Calculate approval rate
+    const totalDeveloperApplications = developerStats.approved + developerStats.rejected + developerStats.pending
+    const developerApprovalRate = totalDeveloperApplications > 0 
+      ? Math.round((developerStats.approved / totalDeveloperApplications) * 100)
+      : 0
+
+    // Calculate project completion rate
+    const projectCompletionRate = projectStats.total > 0 
+      ? Math.round((projectStats.closed / projectStats.total) * 100)
+      : 0
+
+    return {
+      totalUsers,
+      totalDevelopers: developerStats.total,
+      pendingDevelopers: developerStats.pending,
+      approvedDevelopers: developerStats.approved,
+      rejectedDevelopers: developerStats.rejected,
+      totalCompanies,
+      totalProjects: projectStats.total,
+      activeProjects: projectStats.open + projectStats.in_progress,
+      closedProjects: projectStats.closed,
+      activeSubscriptions,
+      recentSignups,
+      estimatedMonthlyRevenue,
+      developerApprovalRate,
+      projectCompletionRate
+    }
+  }
+}
 
 export class NeonDatabaseProvider implements IDatabaseProvider {
   users = new NeonUserRepository()
@@ -1053,10 +1644,84 @@ export class NeonDatabaseProvider implements IDatabaseProvider {
   applications = new NeonApplicationRepository()
   developerContacts = new NeonDeveloperContactRepository()
   developerProfiles = new NeonDeveloperProfileRepository()
-  seekerProfiles = new NeonSeekerProfileRepository() // Add this line
+  seekerProfiles = new NeonSeekerProfileRepository()
   skills = new NeonSkillRepository()
   developerSkills = new NeonDeveloperSkillRepository()
   companySkills = new NeonCompanySkillRepository()
+  adminStats = new NeonAdminStatsRepository()
+
+  async getCompanyDashboardData(companyId: string): Promise<CompanyDashboardData> {
+    // Get company projects
+    const projects = await this.projects.findProjectsByCompanyId(companyId, 10)
+    
+    const projectIds = projects.map(p => p.id)
+
+    // Get all dashboard data in parallel
+    const [applicationStats, recentApplications, subscription] = await Promise.all([
+      this.applications.getApplicationStatsByProjectIds(projectIds),
+      this.applications.getRecentApplicationsForCompany(companyId, 10),
+      this.subscriptions.findByUserId(companyId)
+    ])
+
+    // Calculate aggregate stats
+    const totalProjects = projects.length
+    const activeProjects = projects.filter(p => p.status === 'open').length
+    const totalApplications = applicationStats.reduce((sum, stat) => sum + stat.count, 0)
+    const pendingApplications = applicationStats
+      .filter(stat => stat.status === 'pending')
+      .reduce((sum, stat) => sum + stat.count, 0)
+
+    return {
+      projects,
+      recentApplications,
+      subscription,
+      stats: {
+        totalProjects,
+        activeProjects,
+        totalApplications,
+        pendingApplications
+      }
+    }
+  }
+
+  async getCompanyProjectsData(companyId: string): Promise<CompanyProjectsData> {
+    // Get all company projects
+    const projects = await this.projects.findAllProjectsByCompanyId(companyId)
+    
+    const projectIds = projects.map(p => p.id)
+    
+    // Get all applications for these projects
+    const applications = await this.applications.findApplicationsForProjects(projectIds)
+
+    // Group applications by project and calculate counts
+    const projectsWithApplications: CompanyProjectWithApplications[] = projects.map(project => {
+      const projectApplications = applications.filter(app => app.projectId === project.id)
+      
+      return {
+        ...project,
+        applications: projectApplications,
+        applicationCount: projectApplications.length,
+        pendingCount: projectApplications.filter(app => app.status === 'pending').length,
+      }
+    })
+
+    return {
+      projects: projectsWithApplications
+    }
+  }
+
+  async getDeveloperPageData(developerId: string, currentUserId: string): Promise<DeveloperPageData | null> {
+    const developer = await this.profiles.findDeveloperWithFullDetails(developerId)
+    
+    if (!developer) {
+      return null
+    }
+
+    return {
+      developer,
+      isOwner: currentUserId === developerId
+    }
+  }
 
   async transaction<T>(fn: (tx: IDatabaseProvider) => Promise<T>): Promise<T> {
     return await db.transaction(async (tx) => {

@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
-import {
-  profiles, developerProfiles, users, developerSkills, skills
-} from '@/lib/db/schema'
-import { eq, and, desc, count, sql } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server' // Add missing import
+import { db } from '@/lib/database'
 
 export async function GET(request: NextRequest) {
   try {
-    const db = getDb()
     const user = await currentUser()
 
-    if (!user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if user is admin
-    const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, user.id as string),
-    })
-
-    // console.log(`admin? ${JSON.stringify(adminProfile, null, "  ")}`)
+    const adminProfile = await db.profiles.findByUserId(user.id)
 
     if (adminProfile?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
@@ -31,75 +23,24 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const offset = (page - 1) * limit
 
-    // Build where conditions
-    let whereConditions = eq(profiles.role, 'developer')
-    
-    if (status && status !== 'all') {
-      whereConditions = and(
-        whereConditions,
-        eq(developerProfiles.approved, status as 'pending' | 'approved' | 'rejected')
-      )
+    const filters = {
+      status: status || 'all',
+      page,
+      limit,
+      offset
     }
 
-    // console.log(`ABOUT TO CALL DB`)
+    const developers = await  db.developerProfiles.findDevelopersForAdmin(filters)
 
-    // Get developers with relations
-    const developers = await db
-      .select({
-        // Profile info
-        profileId: profiles.id,
-        displayName: profiles.displayName,
-        avatarUrl: profiles.avatarUrl,
-        timezone: profiles.timezone,
-        profileCreatedAt: profiles.createdAt,
-        
-        // Developer profile info
-        headline: developerProfiles.headline,
-        bio: developerProfiles.bio,
-        rate: developerProfiles.rate,
-        availability: developerProfiles.availability,
-        approved: developerProfiles.approved,
-        portfolioUrl: developerProfiles.portfolioUrl,
-        githubUrl: developerProfiles.githubUrl,
-        websiteUrl: developerProfiles.websiteUrl,
-        country: developerProfiles.country,
-      })
-      .from(profiles)
-      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
-      .where(whereConditions)
-      .orderBy(desc(profiles.createdAt))
-      .limit(limit)
-      .offset(offset)
+    const total = await db.developerProfiles.getTotalDevelopersCount(filters)
 
-    // Get total count for pagination
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(profiles)
-      .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
-      .where(whereConditions)
+    const userIds = developers.map(dev => dev.profileId)
+    const skillsByUser = await db.developerSkills.findSkillsForDevelopers(userIds)
 
-    const total = totalResult.count
-
-    // Get skills for each developer (could be optimized with a single query)
-    const developersWithSkills = await Promise.all(
-      developers.map(async (dev) => {
-        const devSkills = await db
-          .select({
-            skillId: skills.id,
-            skillSlug: skills.slug,
-            skillLabel: skills.label,
-            level: developerSkills.level,
-          })
-          .from(developerSkills)
-          .innerJoin(skills, eq(developerSkills.skillId, skills.id))
-          .where(eq(developerSkills.userId, dev.profileId))
-
-        return {
-          ...dev,
-          skills: devSkills,
-        }
-      })
-    )
+    const developersWithSkills = developers.map(dev => ({
+      ...dev,
+      skills: skillsByUser.get(dev.profileId) || []
+    }))
 
     return NextResponse.json({
       developers: developersWithSkills,
@@ -119,17 +60,13 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/developers - Update developer approval status
 export async function PATCH(request: NextRequest) {
   try {
-    const db = getDb()
     const user = await currentUser()
     
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
-    const adminProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, user.id as string),
-    })
+    const adminProfile = await db.profiles.findByUserId(user.id)
 
     if (adminProfile?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
@@ -144,20 +81,46 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Update developer approval status
-    const [updatedDeveloper] = await db
-      .update(developerProfiles)
-      .set({ 
-        approved: approved as 'approved' | 'rejected' | 'pending'
-      })
-      .where(eq(developerProfiles.userId, developerId))
-      .returning()
-
-    if (!updatedDeveloper) {
-      return NextResponse.json(
-        { error: 'Developer not found' },
-        { status: 404 }
+    try {
+      const updatedDeveloper = await db.developerProfiles.updateApprovalStatus(
+        developerId, 
+        approved as 'approved' | 'rejected' | 'pending'
       )
+
+      // TODO: Send notification to developer about approval status change
+      // You could create a notification record here
+      if (approved !== 'pending') {
+        try {
+          await db.notifications.create({
+            userId: developerId,
+            title: `Application ${approved}`,
+            message: `Your developer application has been ${approved}.`,
+            type: 'application_status',
+            isRead: false,
+            data: {
+              status: approved,
+              updatedBy: user.id
+            }
+          })
+        } catch (notificationError) {
+          console.error('Failed to create notification:', notificationError)
+          // Don't fail the main operation if notification fails
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        developer: updatedDeveloper,
+      })
+
+    } catch (error) {
+      if (error.message === 'Developer not found') {
+        return NextResponse.json(
+          { error: 'Developer not found' },
+          { status: 404 }
+        )
+      }
+      throw error
     }
 
     // TODO: Send notification to developer about approval status change

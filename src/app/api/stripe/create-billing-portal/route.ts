@@ -1,31 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { SubscriptionService } from '@/lib/stripe/subscription'
-import { db } from '@/lib/db'
-import { subscriptions } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 export async function POST(req: NextRequest) {
   try {
     const user = await currentUser()
     
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user's subscription to find customer ID
-    const userSubscription = await db.select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, user.id))
-      .limit(1)
+    const userSubscription = await db.subscriptions.findByUserId(user.id)
 
-    if (!userSubscription.length) {
+    if (!userSubscription) {
       return NextResponse.json({ 
         error: 'No subscription found. Please subscribe first.' 
       }, { status: 404 })
     }
 
-    const customerId = userSubscription[0].stripeCustomerId
+    const customerId = userSubscription.stripeCustomerId
 
     const portalSession = await SubscriptionService.createBillingPortalSession(customerId)
 

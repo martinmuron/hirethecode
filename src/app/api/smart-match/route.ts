@@ -1,40 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { db } from '@/lib/db'
-import { 
-  profiles, 
-  companySkills, 
-  developerSkills, 
-  skills, 
-  developerProfiles,
-  companyProfiles 
-} from '@/lib/db/schema'
-import { eq, and, inArray, sql } from 'drizzle-orm'
+import { db } from '@/lib/database'
 
 export async function GET(req: NextRequest) {
   try {
     const user = await currentUser()
 
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user profile
-    const userProfile = await db.select()
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1)
+    const userProfile = await db.profiles.findByUserId(user.id)
 
-    if (!userProfile.length) {
+    if (!userProfile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const profile = userProfile[0]
-
-    if (profile.role === 'company') {
-      return await getCompanyMatches(profile.id)
-    } else if (profile.role === 'developer') {
-      return await getDeveloperMatches(profile.id)
+    if (userProfile.role === 'company') {
+      return await getCompanyMatches(userProfile.id)
+    } else if (userProfile.role === 'developer') {
+      return await getDeveloperMatches(userProfile.id)
     } else {
       return NextResponse.json({ error: 'Invalid role for smart matching' }, { status: 403 })
     }
@@ -49,15 +35,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function getCompanyMatches(companyId: string) {
-  // Get company's skill requirements
-  const companyRequiredSkills = await db.select({
-    skillId: companySkills.skillId,
-    importance: companySkills.importance,
-    skill: skills
-  })
-    .from(companySkills)
-    .innerJoin(skills, eq(companySkills.skillId, skills.id))
-    .where(eq(companySkills.userId, companyId))
+  const companyRequiredSkills = await db.companySkills.findSkillsWithDetailsForCompany(companyId)
 
   if (companyRequiredSkills.length === 0) {
     return NextResponse.json({ 
@@ -68,49 +46,10 @@ async function getCompanyMatches(companyId: string) {
 
   const requiredSkillIds = companyRequiredSkills.map(cs => cs.skillId)
 
-  // Get company preferences
-  const companyProfile = await db.select()
-    .from(companyProfiles)
-    .where(eq(companyProfiles.userId, companyId))
-    .limit(1)
+  const companyProfile = await db.companyProfiles.findByUserId(companyId)
 
-  // Get developers with matching skills
-  const matchingDevelopers = await db.select({
-    developer: {
-      id: profiles.id,
-      displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
-      createdAt: profiles.createdAt,
-    },
-    profile: {
-      headline: developerProfiles.headline,
-      bio: developerProfiles.bio,
-      rate: developerProfiles.rate,
-      availability: developerProfiles.availability,
-      country: developerProfiles.country,
-      portfolioUrl: developerProfiles.portfolioUrl,
-      githubUrl: developerProfiles.githubUrl,
-    },
-    skill: {
-      id: skills.id,
-      label: skills.label,
-      slug: skills.slug
-    },
-    skillLevel: developerSkills.level
-  })
-    .from(profiles)
-    .innerJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
-    .innerJoin(developerSkills, eq(profiles.id, developerSkills.userId))
-    .innerJoin(skills, eq(developerSkills.skillId, skills.id))
-    .where(
-      and(
-        eq(profiles.role, 'developer'),
-        eq(developerProfiles.approved, 'approved'),
-        inArray(developerSkills.skillId, requiredSkillIds)
-      )
-    )
+  const matchingDevelopers = await db.developerProfiles.findDevelopersForCompanyMatch(requiredSkillIds)
 
-  // Group by developer and calculate match scores
   const developerMatches = new Map()
 
   matchingDevelopers.forEach(match => {
@@ -232,15 +171,7 @@ async function getCompanyMatches(companyId: string) {
 }
 
 async function getDeveloperMatches(developerId: string) {
-  // Get developer's skills
-  const developerSkillsData = await db.select({
-    skillId: developerSkills.skillId,
-    level: developerSkills.level,
-    skill: skills
-  })
-    .from(developerSkills)
-    .innerJoin(skills, eq(developerSkills.skillId, skills.id))
-    .where(eq(developerSkills.userId, developerId))
+  const developerSkillsData = await db.developerSkills.findSkillsWithDetailsForDeveloper(developerId)
 
   if (developerSkillsData.length === 0) {
     return NextResponse.json({ 
@@ -251,40 +182,7 @@ async function getDeveloperMatches(developerId: string) {
 
   const developerSkillIds = developerSkillsData.map(ds => ds.skillId)
 
-  // Get companies looking for these skills
-  const matchingCompanies = await db.select({
-    company: {
-      id: profiles.id,
-      displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
-      createdAt: profiles.createdAt,
-    },
-    companyProfile: {
-      companyName: companyProfiles.companyName,
-      logoUrl: companyProfiles.logoUrl,
-      about: companyProfiles.about,
-      industry: companyProfiles.industry,
-      size: companyProfiles.size,
-      workStyle: companyProfiles.workStyle,
-      experienceLevel: companyProfiles.experienceLevel,
-    },
-    skill: {
-      id: skills.id,
-      label: skills.label,
-      slug: skills.slug
-    },
-    skillImportance: companySkills.importance
-  })
-    .from(profiles)
-    .innerJoin(companyProfiles, eq(profiles.id, companyProfiles.userId))
-    .innerJoin(companySkills, eq(profiles.id, companySkills.userId))
-    .innerJoin(skills, eq(companySkills.skillId, skills.id))
-    .where(
-      and(
-        eq(profiles.role, 'company'),
-        inArray(companySkills.skillId, developerSkillIds)
-      )
-    )
+  const matchingCompanies = await db.companySkills.findCompaniesWithMatchingSkills(developerSkillIds)
 
   // Group by company and calculate match scores
   const companyMatches = new Map()

@@ -1,119 +1,37 @@
 import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { 
-  profiles, 
-  projects, 
-  projectApplications, 
-  subscriptions,
-  users,
-  developerProfiles 
-} from '@/lib/db/schema'
-import { eq, and, desc, count } from 'drizzle-orm'
+import { db } from '@/lib/database'
 import { CompanyDashboard } from '@/components/company/company-dashboard'
 
 export default async function CompanyDashboardPage() {
   const user = await currentUser()
   
-  if (!user?.email) {
+  if (!user) {
     redirect('/auth/sign-in')
   }
 
   // Get user profile
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.id, user.id))
-    .limit(1)
+  const userProfile = await db.profiles.findByUserId(user.id)
 
-  if (!userProfile.length) {
+  if (!userProfile) {
     redirect('/profile/setup')
   }
 
-  const profile = userProfile[0]
-
   // Only companies can access this page
-  if (profile.role !== 'company') {
+  if (userProfile.role !== 'company') {
     redirect('/dashboard')
   }
 
-  // Get company projects with application stats
-  const companyProjects = await db.select({
-    id: projects.id,
-    title: projects.title,
-    description: projects.description,
-    status: projects.status,
-    createdAt: projects.createdAt,
-  })
-    .from(projects)
-    .where(eq(projects.companyId, profile.id))
-    .orderBy(desc(projects.createdAt))
-    .limit(10) // Latest 10 projects
-
-  const projectIds = companyProjects.map(p => p.id)
-
-  // Get application statistics
-  const applicationStats = projectIds.length > 0 ? await db.select({
-    projectId: projectApplications.projectId,
-    status: projectApplications.status,
-    count: count()
-  })
-    .from(projectApplications)
-    .where(eq(projectApplications.projectId, projects.id))
-    .groupBy(projectApplications.projectId, projectApplications.status) : []
-
-  // Get recent applications with developer details
-  const recentApplications = projectIds.length > 0 ? await db.select({
-    id: projectApplications.id,
-    projectId: projectApplications.projectId,
-    projectTitle: projects.title,
-    status: projectApplications.status,
-    createdAt: projectApplications.createdAt,
-    developer: {
-      id: profiles.id,
-      displayName: profiles.displayName,
-      avatarUrl: profiles.avatarUrl,
-    },
-    developerProfile: {
-      headline: developerProfiles.headline,
-      rate: developerProfiles.rate,
-      availability: developerProfiles.availability,
-    }
-  })
-    .from(projectApplications)
-    .innerJoin(projects, eq(projectApplications.projectId, projects.id))
-    .innerJoin(profiles, eq(projectApplications.developerId, profiles.id))
-    .leftJoin(developerProfiles, eq(profiles.id, developerProfiles.userId))
-    .where(eq(projects.companyId, profile.id))
-    .orderBy(desc(projectApplications.createdAt))
-    .limit(10) : []
-
-  // Get subscription status
-  const subscription = await db.select()
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, profile.id))
-    .limit(1)
-
-  // Calculate aggregate stats
-  const totalProjects = companyProjects.length
-  const activeProjects = companyProjects.filter(p => p.status === 'open').length
-  const totalApplications = applicationStats.reduce((sum, stat) => sum + stat.count, 0)
-  const pendingApplications = applicationStats
-    .filter(stat => stat.status === 'pending')
-    .reduce((sum, stat) => sum + stat.count, 0)
+  const dashboardData = await db.getCompanyDashboardData(userProfile.id)
 
   return (
     <CompanyDashboard 
       user={user}
-      company={profile}
-      projects={companyProjects}
-      recentApplications={recentApplications}
-      subscription={subscription[0] || null}
-      stats={{
-        totalProjects,
-        activeProjects,
-        totalApplications,
-        pendingApplications
-      }}
+      company={userProfile}
+      projects={dashboardData.projects}
+      recentApplications={dashboardData.recentApplications}
+      subscription={dashboardData.subscription}
+      stats={dashboardData.stats}
     />
   )
 }

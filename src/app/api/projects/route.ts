@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db } from '@/lib/database'
 import { currentUser } from '@clerk/nextjs/server'
-import { 
-  projects, 
-  profiles,
-  projectSkills,
-  skills as skillsTable
-} from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 
 interface CreateProjectRequest {
   title: string
@@ -28,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
 
-    if (!user?.email) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

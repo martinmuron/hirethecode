@@ -1,8 +1,6 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { profiles, notifications, projects } from '@/lib/db/schema'
-import { eq, and, sql } from 'drizzle-orm'
+import { db } from '@/lib/database'
 import { DeveloperDashboard } from '@/components/dashboard/developer-dashboard'
 import { CompanyDashboard } from '@/components/dashboard/company-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
@@ -10,7 +8,6 @@ import { SeekerDashboard } from '@/components/dashboard/seeker-dashboard'
 import { SubscriptionRequired } from '@/components/dashboard/subscription-required'
 
 export default async function DashboardPage() {
-  // const { userId } = auth()
   const user = await currentUser()
   const id = user?.id
 
@@ -22,23 +19,13 @@ export default async function DashboardPage() {
   }
 
   // Get user profile from database
-  const userProfile = await db.select()
-    .from(profiles)
-    .where(eq(profiles.id, id))
-    .limit(1)
+  const userProfile = await db.profiles.findByUserId(id)
 
-  if (!userProfile.length) {
+  if (!userProfile) {
     redirect('/profile/setup')
   }
 
-  const profile = userProfile[0]
-
-  const unreadCount = await db.select({ count: sql<number>`count(*)` })
-    .from(notifications)
-    .where(and(
-      eq(notifications.userId, id),
-      eq(notifications.isRead, false)
-    ))
+  const unreadCount = await db.notifications.findUnreadCountByUserId(id)
 
   // Check subscription status (simplified for now)
   // TODO: Integrate with Stripe to check actual subscription status
@@ -50,11 +37,11 @@ export default async function DashboardPage() {
 
   const constructedUser = { id: id }
 
-  switch (profile.role) {
+  switch (userProfile.role) {
     case 'developer':
       return (
         <DeveloperDashboard 
-          profile={profile} 
+          profile={userProfile} 
           user={constructedUser}
           unreadNotificationCount={unreadCount}
         />
@@ -62,21 +49,16 @@ export default async function DashboardPage() {
 
     case 'seeker':
       // Get seeker-specific stats
-      const activeProjects = await db.select({ count: sql<number>`count(*)` })
-        .from(projects)
-        .where(and(
-          eq(projects.seekerId, id),
-          eq(projects.status, 'open')
-        ))
+      const activeProjects = await db.projects.findOpenProjectsCountBySeekerId(id)
 
       const totalApplications = 0 // TODO: Implement when you have project applications
 
       return (
         <SeekerDashboard 
-          profile={profile} 
+          profile={userProfile} 
           user={constructedUser}
           unreadNotificationCount={unreadCount}
-          activeProjects={activeProjects[0]?.count || 0}
+          activeProjects={activeProjects?.count || 0}
           totalApplications={totalApplications}
         />
       )

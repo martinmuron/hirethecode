@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { auth } from '@clerk/nextjs/server'
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { currentUser } from '@clerk/nextjs/server'
+import { db } from '@/lib/database'
 
 export async function POST(req: NextRequest) {
   const { id, email, name, image } = await req.json()
-  // const { userId } = auth()
+  const user = await currentUser()
   
   console.log('sync-user: received data:', { id, email, name }) // Debug
 
-  /*
-  if (!userId) {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
-
-  const { id, email, name, image } = await req.json()
-  */
-
   try {
     // Check if profile already exists
-    const existing = await db
-      .select()
-      .from(profiles)
-      .where(eq(profiles.id, id))
-      .limit(1)
+    const existing = db.profiles.findByUserId(user.id)
 
-    if (!existing.length) {
+    if (!existing) {
       console.log('sync-user: creating profile for:', id) // Debug
-      await db.insert(profiles).values({
+      await db.profiles.create({
         id: id,
         role: 'developer', // Default - user can change in setup
         displayName: name || email,
