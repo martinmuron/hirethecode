@@ -1,8 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server' // Use currentUser directly
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import { ProfileSetupForm } from '@/components/profile/profile-setup-form'
 
 export default async function ProfileSetupPage() {
@@ -13,13 +10,9 @@ export default async function ProfileSetupPage() {
   }
   
   // Check if profile already exists
-  const existingProfile = await db
-    .select()
-    .from(profiles)
-    .where(eq(profiles.id, user.id))
-    .limit(1)
+  const existingProfile = await db.profiles.findByUserId(user.id)
 
-  if (existingProfile.length > 0) {
+  if (existingProfile) {
     redirect('/dashboard')
   }
 
